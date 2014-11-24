@@ -116,6 +116,7 @@ public:
   MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h);
   virtual ~MyMainFrame();
   void DoExport();
+  void DoExportGr();
   void DoExit();
   TString updatePlot(Int_t id=0, TCanvas *cT=0);
 

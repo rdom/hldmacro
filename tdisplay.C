@@ -331,6 +331,20 @@ void MyMainFrame::DoExport(){
   
 }
 
+void MyMainFrame::DoExportGr(){
+  TFile efile("calib.root","NEW");
+
+  for(Int_t m=0; m<nmcp; m++){
+    for(Int_t p=0; p<npix; p++){
+      gGr[0][m][p]->SetName(Form("%d_%d",m,p));
+      gGr[0][m][p]->Write();
+    }
+  }
+  efile.Write();
+  efile.Close();
+}
+
+
 TGraph * getGarph(TH1F *hist){
   TGraph * gr = new TGraph();
   Int_t nbins=600;
@@ -441,10 +455,14 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   fBtnExport->Connect("Clicked()", "MyMainFrame", this, "DoExport()");
   hframe->AddFrame(fBtnExport, new TGLayoutHints(kLHintsBottom | kLHintsLeft,5, 5, 5, 5));
 
+  TGTextButton * fBtnExportGr = new TGTextButton(hframe, "Export curves");
+  fBtnExportGr->Connect("Clicked()", "MyMainFrame", this, "DoExportGr()");
+  hframe->AddFrame(fBtnExportGr, new TGLayoutHints(kLHintsBottom | kLHintsLeft,5, 5, 5, 5));
+
+
   TGTextButton *exit = new TGTextButton(hframe, "&Exit ");
   exit->Connect("Pressed()", "MyMainFrame", this, "DoExit()");
   hframe->AddFrame(exit, new TGLayoutHints(kLHintsCenterX, 5, 5, 3, 4));
-
 
   AddFrame(hframe, new TGLayoutHints(kLHintsExpandX | kLHintsCenterX, 2, 2, 2, 2));
 
