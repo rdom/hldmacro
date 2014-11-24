@@ -154,9 +154,9 @@ Bool_t TTSelector::Process(Long64_t entry){
     for(fileid=0; fileid<nfiles; fileid++){
       if(current_file_name.Contains(fileList[fileid])) break;
     }
-  }else{
-      if(current_file_name.Contains("cc"))  fileid=1;
   }
+  if(gMode==4) if(current_file_name.Contains("cc"))  fileid=1;
+  
   
 
  
