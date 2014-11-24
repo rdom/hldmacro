@@ -150,11 +150,15 @@ Bool_t TTSelector::Process(Long64_t entry){
     offset = soffset.Atof();
   }
   Int_t fileid=0;
-  if(gMode!=3){
+  if(gMode<3){
     for(fileid=0; fileid<nfiles; fileid++){
       if(current_file_name.Contains(fileList[fileid])) break;
     }
+  }else{
+      if(current_file_name.Contains("cc"))  fileid=1;
   }
+  
+
  
   GetEntry(entry);
   for(Int_t i=0; i<Hits_; i++){
@@ -359,6 +363,8 @@ void Calibrate(){
 	gGr[j][m][p] = getGarph(hFine[j][m][p]);
 	TString title = Form("%s  %d", hFine[j][m][p]->GetTitle(), (Int_t)hFine[j][m][p]->GetEntries());
 	if(gMode==3) title = Form("All  %d", (Int_t)hFine[j][m][p]->GetEntries());
+	if(gMode==4 && j=0) title = Form("All beam  %d", (Int_t)hFine[j][m][p]->GetEntries());
+	if(gMode==4 && j=1) title = Form("All pilas  %d", (Int_t)hFine[j][m][p]->GetEntries());
 	gGr[j][m][p]->SetName(Form("gCalib_%d_mcp%dpix%d",j,m,p));
 	gGr[j][m][p]->SetTitle(title);
 	gGr[j][m][p]->GetXaxis()->SetTitle("fine bin, [#]");
@@ -463,15 +469,15 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   TIter next(fileElements);
   TChainElement *chEl=0; 
   TString strfiles="";
-  if(gMode!=3){
-    while (( chEl=(TChainElement*)next() )) {
-      fileList[nfiles]=chEl->GetTitle();
-      strfiles += fileList[nfiles] +" ";
+
+  while (( chEl=(TChainElement*)next() )) {
+    fileList[nfiles]=chEl->GetTitle();
+    strfiles += fileList[nfiles] +" ";
       nfiles++;
-    }
-  }else{
-    nfiles=1;
   }
+
+  if(gMode!=3) nfiles=1;
+  if(gMode!=2) nfiles=2;
   
   TString option = Form("%d %d %d ",nfiles,gTrigger,gMode)+strfiles;
   
