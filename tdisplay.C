@@ -96,7 +96,7 @@ void TTSelector::SlaveBegin(TTree *){
   nfiles = ((TObjString*)strobj->At(0))->GetString().Atoi();
   gTrigger = ((TObjString*)strobj->At(1))->GetString().Atoi();
   gMode = ((TObjString*)strobj->At(2))->GetString().Atoi();
-  for(Int_t i=3; i<nfiles+1; i++){
+  for(Int_t i=3; i<nfiles+2; i++){
     fileList[i-3]=((TObjString*)strobj->At(i))->GetString();
     std::cout<<" fileList[i]  "<<fileList[i-3] <<std::endl;
   }
@@ -358,6 +358,7 @@ void Calibrate(){
       for(Int_t j=0; j<nfiles; j++){
 	gGr[j][m][p] = getGarph(hFine[j][m][p]);
 	TString title = Form("%s  %d", hFine[j][m][p]->GetTitle(), (Int_t)hFine[j][m][p]->GetEntries());
+	if(gMode==3) title = Form("All  %d", (Int_t)hFine[j][m][p]->GetEntries());
 	gGr[j][m][p]->SetName(Form("gCalib_%d_mcp%dpix%d",j,m,p));
 	gGr[j][m][p]->SetTitle(title);
 	gGr[j][m][p]->GetXaxis()->SetTitle("fine bin, [#]");
@@ -468,6 +469,8 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
       strfiles += fileList[nfiles] +" ";
       nfiles++;
     }
+  }else{
+    nfiles=1;
   }
   
   TString option = Form("%d %d %d ",nfiles,gTrigger,gMode)+strfiles;
