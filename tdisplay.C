@@ -1,6 +1,7 @@
 // tdisplay - tool to plot different quantities from the .hld file
-// original author: Roman Dzhygadlo - GSI Darmstadt #define TTSelector_cxx
+// original author: Roman Dzhygadlo - GSI Darmstadt 
 
+#define TTSelector_cxx
 #include "prttools.C"
 
 #include "TStyle.h"
@@ -184,6 +185,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	if(mcp==2  && pix==62) continue;
 	if(mcp==13 && pix==62) continue;
 	if(mcp==14 && pix==28) continue;
+	if(mcp==10 && pix==46) continue;
 	if(mcp<15){
 	  fhDigi[mcp]->Fill(col,row);
 	  timeLe = Hits_fTime[i]-trbRefTime[trbSeqId];
