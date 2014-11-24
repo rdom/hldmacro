@@ -95,9 +95,10 @@ void TTSelector::SlaveBegin(TTree *){
   TObjArray *strobj = option.Tokenize(" ");
   nfiles = ((TObjString*)strobj->At(0))->GetString().Atoi();
   gTrigger = ((TObjString*)strobj->At(1))->GetString().Atoi();
-  for(Int_t i=2; i<nfiles+1; i++){
-    fileList[i-2]=((TObjString*)strobj->At(i))->GetString();
-    std::cout<<" fileList[i]  "<<fileList[i-2] <<std::endl;
+  gMode = ((TObjString*)strobj->At(2))->GetString().Atoi();
+  for(Int_t i=3; i<nfiles+1; i++){
+    fileList[i-3]=((TObjString*)strobj->At(i))->GetString();
+    std::cout<<" fileList[i]  "<<fileList[i-3] <<std::endl;
   }
 
   for(Int_t m=0; m<nmcp; m++){
@@ -461,13 +462,15 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   TIter next(fileElements);
   TChainElement *chEl=0; 
   TString strfiles="";
-  while (( chEl=(TChainElement*)next() )) {
-    fileList[nfiles]=chEl->GetTitle();
-    strfiles += fileList[nfiles] +" ";
-    nfiles++;
+  if(gMode!=3){
+    while (( chEl=(TChainElement*)next() )) {
+      fileList[nfiles]=chEl->GetTitle();
+      strfiles += fileList[nfiles] +" ";
+      nfiles++;
+    }
   }
   
-  TString option = Form("%d %d ",nfiles,gTrigger)+strfiles;
+  TString option = Form("%d %d %d ",nfiles,gTrigger,gMode)+strfiles;
   
   std::cout<<"nfiles "<<nfiles <<std::endl;
 
