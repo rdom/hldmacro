@@ -363,8 +363,8 @@ void Calibrate(){
 	gGr[j][m][p] = getGarph(hFine[j][m][p]);
 	TString title = Form("%s  %d", hFine[j][m][p]->GetTitle(), (Int_t)hFine[j][m][p]->GetEntries());
 	if(gMode==3) title = Form("All  %d", (Int_t)hFine[j][m][p]->GetEntries());
-	if(gMode==4 && j=0) title = Form("All beam  %d", (Int_t)hFine[j][m][p]->GetEntries());
-	if(gMode==4 && j=1) title = Form("All pilas  %d", (Int_t)hFine[j][m][p]->GetEntries());
+	if(gMode==4 && j==0) title = Form("All beam  %d", (Int_t)hFine[j][m][p]->GetEntries());
+	if(gMode==4 && j==1) title = Form("All pilas  %d", (Int_t)hFine[j][m][p]->GetEntries());
 	gGr[j][m][p]->SetName(Form("gCalib_%d_mcp%dpix%d",j,m,p));
 	gGr[j][m][p]->SetTitle(title);
 	gGr[j][m][p]->GetXaxis()->SetTitle("fine bin, [#]");
