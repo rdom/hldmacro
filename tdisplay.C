@@ -477,7 +477,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   }
 
   if(gMode!=3) nfiles=1;
-  if(gMode!=2) nfiles=2;
+  if(gMode!=4) nfiles=2;
   
   TString option = Form("%d %d %d ",nfiles,gTrigger,gMode)+strfiles;
   
