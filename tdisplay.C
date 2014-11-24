@@ -47,7 +47,7 @@ TH2F *hShape[nmcp][npix];
 TH1F *hCh;
 
 TString ginFile="";
-Int_t gTrigger;
+Int_t gTrigger, gMode=0;;
 
 const Int_t tdcnum=88;
 const Int_t tdcmax=10000;
@@ -149,8 +149,10 @@ Bool_t TTSelector::Process(Long64_t entry){
     offset = soffset.Atof();
   }
   Int_t fileid=0;
-  for(fileid=0; fileid<nfiles; fileid++){
-    if(current_file_name.Contains(fileList[fileid])) break;
+  if(gMode!=3){
+    for(fileid=0; fileid<nfiles; fileid++){
+      if(current_file_name.Contains(fileList[fileid])) break;
+    }
   }
  
   GetEntry(entry);
@@ -501,5 +503,6 @@ void tdisplay(TString inFile= "file.hld.root", Int_t trigger=1952, Int_t mode =0
   //inFile= "/SAT/hera/had1/dervish/data/dirc/scan1/th_1*.hld.root";
   ginFile = inFile;
   gTrigger = trigger;
+  gMode=mode;
   new MyMainFrame(gClient->GetRoot(), 800, 800);
 }
