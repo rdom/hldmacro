@@ -332,7 +332,7 @@ void MyMainFrame::DoExport(){
 }
 
 void MyMainFrame::DoExportGr(){
-  TFile efile("calib.root","NEW");
+  TFile efile("calib.root","RECREATE");
 
   for(Int_t m=0; m<nmcp; m++){
     for(Int_t p=0; p<npix; p++){
