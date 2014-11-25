@@ -149,6 +149,7 @@ Bool_t TTSelector::Process(Long64_t entry){
     TString soffset = ((TObjString *) sarr->At(1))->GetName();
     offset = soffset.Atof();
   }
+  
   Int_t fileid=0;
   if(gMode<3){
     for(fileid=0; fileid<nfiles; fileid++){
@@ -157,9 +158,6 @@ Bool_t TTSelector::Process(Long64_t entry){
   }
   if(gMode==4) if(current_file_name.Contains("cc"))  fileid=1;
   
-  
-
- 
   GetEntry(entry);
   for(Int_t i=0; i<Hits_; i++){
     trbSeqId = tdcmap[Hits_nTrbAddress[i]];
@@ -328,12 +326,13 @@ void MyMainFrame::DoExport(){
   save(cExport,path,"digi","tdisplay",saveFlag,1);
   gROOT->SetBatch(0);
   std::cout<<"Exporting .. Done"<<std::endl;
-  
 }
 
 void MyMainFrame::DoExportGr(){
-  TFile efile("calib.root","RECREATE");
-
+  TString filedir=ginFile;
+  filedir.Remove(filedir.Last('/'));
+  TFile efile(filedir+"/calib.root","RECREATE");
+  
   for(Int_t m=0; m<nmcp; m++){
     for(Int_t p=0; p<npix; p++){
       gGr[0][m][p]->SetName(Form("%d_%d",m,p));
@@ -342,8 +341,8 @@ void MyMainFrame::DoExportGr(){
   }
   efile.Write();
   efile.Close();
+  std::cout<<"Exporting .. Done"<<std::endl;
 }
-
 
 TGraph * getGarph(TH1F *hist){
   TGraph * gr = new TGraph();
@@ -505,7 +504,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   std::cout<<"Entries in chain:  "<< entries<<std::endl;
  
   TString workers = "workers=4";
-  if(gSystem->GetFromPipe("whoami")=="hadaq") workers = "workers=12";
+  if(gSystem->GetFromPipe("whoami")=="hadaq" && entries>1000000) workers = "workers=12";
 
   TProof *proof = TProof::Open(workers);
   proof->SetProgressDialog(0);
@@ -530,7 +529,7 @@ MyMainFrame::~MyMainFrame(){
 }
 
 void tdisplay(TString inFile= "file.hld.root", Int_t trigger=1952, Int_t mode =0){
-  //inFile= "/SAT/hera/had1/dervish/data/dirc/scan1/th_1*.hld.root";
+  //inFile= "data/dirc/scan1/th_1*.hld.root";
   ginFile = inFile;
   gTrigger = trigger;
   gMode=mode;
