@@ -39,7 +39,6 @@ const Int_t maxChannel(3000);
 const Int_t nmcp(15), npix(64);
 TString fileList[maxfiles];
 
-
 TH1F *hCh;
 
 TString ginFile="";
@@ -98,25 +97,36 @@ void TTSelector::Begin(TTree *){
   fTree->Branch("TPrtEvent", "TPrtEvent", &fEvent, 64000, 2);
 }
 
+//Double_t time[50000];
 Bool_t TTSelector::Process(Long64_t entry){
   Int_t trbSeqId,ch;
   Double_t timeTot(0), grTime0=0, grTime1=0,timeLe=0, timeTe=0;
   if(entry%1000==0) std::cout<<"event # "<< entry <<std::endl;
-  
+  Double_t time[50000];
   GetEntry(entry);
   
   fEvent = new TPrtEvent();
-  fEvent->SetReferenceChannel(1920);
+  fEvent->SetReferenceChannel(gTrigger);
   for(Int_t i=0; i<Hits_; i++){
     trbSeqId = tdcmap[Hits_nTrbAddress[i]];
     ch = 32*trbSeqId+Hits_nTdcChannel[i];
     if(++mult[ch]>50) continue;
-    timeTe0[ch][mult[ch]]=Hits_fTime[i];
+    Int_t mcp = ch/128;
+    Int_t pix = (ch - mcp*128)/2;
+    Int_t col = pix/2 - 8*(pix/16);
+    Int_t row = pix%2 + 2*(pix/16);
+    pix = col*8+row;
+    Double_t coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
+ 
+    if(mcp<15) time[i] = coarseTime-gGr[mcp][pix]->Eval(Hits_nFineTime[i]);
+    else time[i] = coarseTime;
+    
+    timeTe0[ch][mult[ch]]=time[i];
     if(Hits_nTdcChannel[i]==0 && Hits_bIsRefChannel[i]) {
-      trbRefTime[trbSeqId] = Hits_fTime[i];
-      if((ch-gTrigger)<64 && (ch-gTrigger)>=0) grTime0 = Hits_fTime[i];
+      trbRefTime[trbSeqId] = time[i];
+      if((ch-gTrigger)<64 && (ch-gTrigger)>=0) grTime0 = time[i];
     }
-    if(ch==gTrigger+1) grTime1 = Hits_fTime[i];
+    if(ch==gTrigger+1) grTime1 = time[i];
   }
 
   if((grTime0>0 && grTime1>0) || gTrigger==0){
@@ -141,7 +151,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	//if(mcp<15)
 	{
 
-	  timeLe = Hits_fTime[i]-trbRefTime[trbSeqId];
+	  timeLe = time[i]-trbRefTime[trbSeqId];
 	  timeTe = timeTe0[ch+1][0]-trbRefTime[trbSeqId];
 	  
 	  timeLe = timeLe - (grTime1-grTime0);
@@ -180,12 +190,11 @@ void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1920,
   gMode=mode;
 
 
-  TFile f("calib.root");
+  TFile f("calibAll.root");
   TIter nextkey(f.GetListOfKeys());
   TKey *key;
 
   const Int_t nmcp = 15, npix = 64;
-  TGraph *gGr[nmcp][npix];
   while (key = (TKey*)nextkey()) {
     TGraph *gr = (TGraph*)key->ReadObj();
     TString name = gr->GetName();

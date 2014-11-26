@@ -178,13 +178,14 @@ Bool_t TTSelector::Process(Long64_t entry){
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
       Int_t mcp = ch/128;
       Int_t pix = (ch - mcp*128)/2;
+
       Int_t col = pix/2 - 8*(pix/16);
       Int_t row = pix%2 + 2*(pix/16);
 
       if(ch%2==0) continue; // go away trailing edge
       hCh->Fill(ch);
       if(ch<3000 && !Hits_bIsRefChannel[i]) {
-	pix = col*8+row;
+       	pix = col*8+row;
 	// bad pixels
 	if(mcp==2  && pix==55) continue;
 	if(mcp==2  && pix==62) continue;
@@ -284,7 +285,7 @@ void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
       TString smcp = selected->GetName();
       smcp = smcp(3,smcp.Sizeof());
       Int_t mcp = smcp.Atoi();
-      Int_t pix = 8*(binx-1)+biny-1;
+      Int_t pix = 8*(biny-1)+binx-1;
   
       cTime->cd();
       //      if(gComboId==0) 
@@ -304,7 +305,7 @@ void MyMainFrame::DoExport(){
   filedir.Remove(filedir.Last('/'));
   TString path = createDir(filedir+"/plots", "beam_data "+ginFile, saveFlag); 
   std::cout<<"Exporting into  "<<path <<std::endl;
-  writeInfo("digi.csv", drawDigi("m,p,v\n",1,-1), saveFlag);
+  writeInfo("digi.csv", drawDigi("m,p,v\n",1), saveFlag);
   //pbar->Reset();
   Float_t total = (nmcp-1)*(npix-1);
   if(gComboId==0 || gComboId==1 || gComboId==2 || gComboId==3){
@@ -514,7 +515,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   TTSelector *selector = new TTSelector();
   ch->Process(selector,option,entries);
     
-  drawDigi("m,p,v\n",1,-1);
+  drawDigi("m,p,v\n",1);
   updatePlot(0); //gComboId
 
   cDigi->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)", 0, 0,
