@@ -313,6 +313,7 @@ Bool_t MSelector::Process(Long64_t entry){
 	  hShape[mcp][pix]->Fill(timeDiff + tot,offset);
 	}
 	hPTime[mcp][col+8*row]->Fill(timeDiff);
+	hPTime[mcp][col+8*row]->SetTitle(Form("%d " ,hit.GetChannel()));
       }
 
       hPTot[mcp][col+8*row]->Fill(tot);

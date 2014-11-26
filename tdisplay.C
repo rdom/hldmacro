@@ -34,11 +34,11 @@
 
 Int_t nfiles = 10;
 const Int_t maxfiles = 200;
-const Int_t maxChannel =3000;
+const Int_t maxch =3000;
 const Int_t nmcp = 15, npix = 64;
 TString fileList[maxfiles];
 
-TH1F *hFine[maxfiles][nmcp][npix];
+TH1F *hFine[maxfiles][maxch];
 TH1F *hTimeL[nmcp][npix];
 TH1F *hTimeT[nmcp][npix];
 TH1F *hTot[nmcp][npix];
@@ -68,9 +68,10 @@ Int_t mult[tdcmax];
 Int_t tdcmap[tdcmax];
 Int_t mcpmap[tdcmax];
 Int_t pixmap[tdcmax];
+Int_t chmap[nmcp][npix];
 
 Int_t gComboId=0;
-TGraph *gGr[maxfiles][nmcp][npix];
+TGraph *gGr[maxfiles][maxch];
 
 TCanvas *cTime;
 
@@ -88,6 +89,14 @@ void CreateMap(){
       }
     }
   }
+ for(Int_t ch=0; ch<maxch; ch++){
+    Int_t mcp = ch/128;
+    Int_t pix = (ch - mcp*128)/2;
+    Int_t col = 7-(pix/2 - 8*(pix/16));
+    Int_t row = pix%2 + 2*(pix/16);
+    pix = col*8+row;
+    chmap[mcp][pix]=ch;
+  }
 }
 
 void TTSelector::SlaveBegin(TTree *){
@@ -101,6 +110,12 @@ void TTSelector::SlaveBegin(TTree *){
     std::cout<<" fileList[i]  "<<fileList[i-3] <<std::endl;
   }
 
+  for(Int_t j=0; j<nfiles; j++){
+    for(Int_t c=0; c<maxch; c++){
+      hFine[j][c] = new TH1F(Form("hFine_%d_ch%d",j,c),Form("hFine_%d_ch%d",j,c) , 600,1,600);
+      fOutput->Add(hFine[j][c]);
+    }
+  }
   for(Int_t m=0; m<nmcp; m++){
     for(Int_t p=0; p<npix; p++){
      
@@ -113,11 +128,6 @@ void TTSelector::SlaveBegin(TTree *){
       fOutput->Add(hTimeT[m][p]);
       fOutput->Add(hTot[m][p]);
       fOutput->Add(hShape[m][p]);
-      for(Int_t j=0; j<nfiles; j++){
-	hFine[j][m][p] = new TH1F(Form("hFine_%d_mcp%dpix%d",j,m,p),Form("hFine_%d_%d_%d",j,m,p) , 600,1,600);
-	fOutput->Add(hFine[j][m][p]);
-      }
-     
     }
 
     fhDigi[m] = new TH2F( Form("mcp%d", m),Form("mcp%d", m),8,0.,8.,8,0.,8.);
@@ -178,31 +188,39 @@ Bool_t TTSelector::Process(Long64_t entry){
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
       Int_t mcp = ch/128;
       Int_t pix = (ch - mcp*128)/2;
+      
+      //Int_t  col = 7-pix/8;
+      //Int_t  row = pix%8;
+
 
       Int_t col = pix/2 - 8*(pix/16);
       Int_t row = pix%2 + 2*(pix/16);
 
-      if(ch%2==0) continue; // go away trailing edge
-      hCh->Fill(ch);
-      if(ch<3000 && !Hits_bIsRefChannel[i]) {
-       	pix = col*8+row;
+      if(ch%2==0 || Hits_bIsRefChannel[i]) continue; // go away trailing edge and ref channel
+      hCh->Fill(ch-1);
+      if(ch<3000) {
 	// bad pixels
+	pix = 8*col+row;
+	if(mcp==0  && pix==0) continue;
 	if(mcp==2  && pix==55) continue;
 	if(mcp==2  && pix==62) continue;
 	if(mcp==13 && pix==62) continue;
 	if(mcp==14 && pix==28) continue;
 	if(mcp==10 && pix==46) continue;
+	pix = col+8*row;
+
 	if(mcp<15){
 	  fhDigi[mcp]->Fill(col,row);
 	  timeLe = Hits_fTime[i]-trbRefTime[trbSeqId];
-	  timeTe = timeTe0[ch+1][0]-trbRefTime[trbSeqId];
+	  timeTe = timeTe0[ch][0]-trbRefTime[trbSeqId];
 	  
-	  hFine[fileid][mcp][pix]->Fill(Hits_nFineTime[i]);
+	  hFine[fileid][ch]->Fill(Hits_nFineTime[i]);
+	  hFine[fileid][ch]->SetTitle(Form("ch %d m%dp%d ",ch, mcp, pix));
 	  hTimeL[mcp][pix]->Fill(timeLe - (grTime1-grTime0));
 	  hTimeT[mcp][pix]->Fill(timeTe - (grTime1-grTime0));
 	  hShape[mcp][pix]->Fill(timeLe - (grTime1-grTime0),offset);
 	  hShape[mcp][pix]->Fill(timeTe - (grTime1-grTime0),offset);
-	  hTot[mcp][pix]->Fill(timeTe0[ch+1][0] - timeTe0[ch][0]);
+	  hTot[mcp][pix]->Fill(timeTe0[ch][0] - timeTe0[ch+1][0]);
 	}
       }
     }
@@ -221,6 +239,8 @@ Bool_t TTSelector::Process(Long64_t entry){
 
 TString drawHist(Int_t m, Int_t p){
   TString histname="";
+  Int_t ch = chmap[m][p];
+  
   if(gComboId==0){
     TLegend *leg = new TLegend(0.5,0.7,0.9,0.9);
     leg->SetFillColor(0);
@@ -228,24 +248,24 @@ TString drawHist(Int_t m, Int_t p){
     leg->SetBorderSize(0);
     Int_t num=0;
     for(Int_t j=0; j<nfiles; j++){
-      if(gGr[j][m][p]->GetN()<1) continue;
+      if(gGr[j][ch]->GetN()<1) continue;
       num++;
-      if(j==0) gGr[j][m][p]->Draw("AL");  
-      else gGr[j][m][p]->Draw("L");
-      leg->AddEntry(gGr[j][m][p],gGr[j][m][p]->GetTitle(),"l");
+      if(j==0) gGr[j][ch]->Draw("AL");  
+      else gGr[j][ch]->Draw("L");
+      leg->AddEntry(gGr[j][ch],gGr[j][ch]->GetTitle(),"l");
     }
     Double_t y1 = 0.9-0.05*num;
     y1 = (y1>0)? y1 : 0; 
     leg->SetY1(y1);
     leg->Draw();
-    histname=gGr[0][m][p]->GetName();
+    histname=gGr[0][ch]->GetName();
   }
   if(gComboId==1){
     for(Int_t j=0; j<nfiles; j++){
-      if(j==0) hFine[j][m][p]->Draw();
-      else hFine[j][m][p]->Draw("same");
+      if(j==0) hFine[j][ch]->Draw();
+      else hFine[j][ch]->Draw("same");
     }
-    histname=hFine[0][m][p]->GetName();
+    histname=hFine[0][ch]->GetName();
   }
   if(gComboId==2){
     hTimeL[m][p]->Draw();
@@ -288,8 +308,6 @@ void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
       Int_t pix = 8*(biny-1)+binx-1;
   
       cTime->cd();
-      //      if(gComboId==0) 
-      //      hFine[0][mcp][pix]->Draw();
       drawHist(mcp,pix);
       cTime->Update(); 
     }
@@ -334,11 +352,9 @@ void MyMainFrame::DoExportGr(){
   filedir.Remove(filedir.Last('/'));
   TFile efile(filedir+"/calib.root","RECREATE");
   
-  for(Int_t m=0; m<nmcp; m++){
-    for(Int_t p=0; p<npix; p++){
-      gGr[0][m][p]->SetName(Form("%d_%d",m,p));
-      gGr[0][m][p]->Write();
-    }
+  for(Int_t c=0; c<maxch; c++){
+      gGr[0][c]->SetName(Form("%d",c));
+      gGr[0][c]->Write();
   }
   efile.Write();
   efile.Close();
@@ -370,22 +386,21 @@ TGraph * getGarph(TH1F *hist){
 
 void Calibrate(){
   std::cout<<"Creating calibration"<<std::endl;
-  
-  for (Int_t m=0; m<nmcp;m++) {
-    for (Int_t p=0; p<npix;p++) {
-      for(Int_t j=0; j<nfiles; j++){
-	gGr[j][m][p] = getGarph(hFine[j][m][p]);
-	TString title = Form("%s  %d", hFine[j][m][p]->GetTitle(), (Int_t)hFine[j][m][p]->GetEntries());
-	if(gMode==3) title = Form("All  %d", (Int_t)hFine[j][m][p]->GetEntries());
-	if(gMode==4 && j==0) title = Form("All beam  %d", (Int_t)hFine[j][m][p]->GetEntries());
-	if(gMode==4 && j==1) title = Form("All pilas  %d", (Int_t)hFine[j][m][p]->GetEntries());
-	gGr[j][m][p]->SetName(Form("gCalib_%d_mcp%dpix%d",j,m,p));
-	gGr[j][m][p]->SetTitle(title);
-	gGr[j][m][p]->GetXaxis()->SetTitle("fine bin, [#]");
-	gGr[j][m][p]->GetYaxis()->SetTitle("fine time, [ns]");
-	hFine[j][m][p]->SetLineColor(getColorId(j));
-	gGr[j][m][p]->SetLineColor(getColorId(j));
-      }
+
+  for(Int_t j=0; j<nfiles; j++){
+    for(Int_t c=0; c<maxch; c++){
+      TString title = Form("%s  %d", hFine[j][c]->GetTitle(), (Int_t)hFine[j][c]->GetEntries());
+      if(gMode==3) title = Form("All  %d", (Int_t)hFine[j][c]->GetEntries());
+      if(gMode==4 && j==0) title = Form("All beam  %d", (Int_t)hFine[j][c]->GetEntries());
+      if(gMode==4 && j==1) title = Form("All pilas  %d", (Int_t)hFine[j][c]->GetEntries());
+      hFine[j][c]->SetLineColor(getColorId(j));
+
+      gGr[j][c] = getGarph(hFine[j][c]);
+      gGr[j][c]->SetName(Form("gCalib_%d_ch%d",j,c));
+      gGr[j][c]->SetTitle(title);
+      gGr[j][c]->GetXaxis()->SetTitle("fine bin, [#]");
+      gGr[j][c]->GetYaxis()->SetTitle("fine time, [ns]");
+      gGr[j][c]->SetLineColor(getColorId(j));
     }
   }
 }
@@ -397,10 +412,13 @@ void TTSelector::Terminate(){
       hTimeT[m][p] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hTimeT_mcp%dpix%d",m,p), fOutput));
       hTot[m][p] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hTot_mcp%dpix%d",m,p), fOutput));
       hShape[m][p] = dynamic_cast<TH2F *>(TProof::GetOutput(Form("hShape_mcp%dpix%d",m,p), fOutput));
-      for(Int_t j=0; j<nfiles; j++){
-	hFine[j][m][p] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hFine_%d_mcp%dpix%d",j,m,p), fOutput));
+    }
+    for(Int_t j=0; j<nfiles; j++){
+      for(Int_t c=0; c<maxch; c++){
+	hFine[j][c] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hFine_%d_ch%d",j,c), fOutput));
       }
     }
+
     fhDigi[m] = dynamic_cast<TH2F *>(TProof::GetOutput(Form("mcp%d", m), fOutput));
   }
   hCh = dynamic_cast<TH1F *>(TProof::GetOutput("hCh", fOutput));
@@ -511,8 +529,8 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   proof->SetProgressDialog(0);
   proof->Load("tdisplay.C+");
   ch->SetProof();
-
   TTSelector *selector = new TTSelector();
+  CreateMap();
   ch->Process(selector,option,entries);
     
   drawDigi("m,p,v\n",1);

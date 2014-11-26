@@ -35,7 +35,7 @@
 #include "tcalibration.h"
 
 const Int_t maxfiles(200);
-const Int_t maxChannel(3000);
+const Int_t maxch =3000;
 const Int_t nmcp(15), npix(64);
 TString fileList[maxfiles];
 
@@ -63,6 +63,7 @@ Int_t mult[tdcmax];
 Int_t tdcmap[tdcmax];
 Int_t mcpmap[tdcmax];
 Int_t pixmap[tdcmax];
+Int_t chmap[nmcp][npix];
 
 Int_t gComboId=0;
 TGraph *gGr[nmcp][npix];
@@ -81,6 +82,17 @@ void CreateMap(){
       }
     }
   }
+  for(Int_t ch=0; ch<maxch; ch++){
+    Int_t mcp = ch/128;
+    Int_t pix = (ch - mcp*128)/2;
+    Int_t col = 7-(pix/2 - 8*(pix/16));
+    Int_t row = pix%2 + 2*(pix/16);
+    pix = col*8+row;
+    std::cout<<"ch  "<<ch <<"  m "<<mcp <<"  p  "<<pix <<std::endl;
+    
+    chmap[mcp][pix]=ch;
+  }
+
 }
 
 void TTSelector::Begin(TTree *){
@@ -113,7 +125,7 @@ Bool_t TTSelector::Process(Long64_t entry){
     if(++mult[ch]>50) continue;
     Int_t mcp = ch/128;
     Int_t pix = (ch - mcp*128)/2;
-    Int_t col = pix/2 - 8*(pix/16);
+    Int_t col = 7-(pix/2 - 8*(pix/16));
     Int_t row = pix%2 + 2*(pix/16);
     pix = col*8+row;
     Double_t coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
@@ -138,10 +150,10 @@ Bool_t TTSelector::Process(Long64_t entry){
       Int_t pix = (ch - mcp*128)/2;
       Int_t col = 7-(pix/2 - 8*(pix/16));
       Int_t row = pix%2 + 2*(pix/16);
+      pix = col*8+row;
 
       if(ch%2==0) continue; // go away trailing edge
       if(ch<3000 && !Hits_bIsRefChannel[i]) {
-	pix = col*8+row;
 	// bad pixels
 	// if(mcp==2  && pix==55) continue;
 	// if(mcp==2  && pix==62) continue;
@@ -156,7 +168,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	  
 	  timeLe = timeLe - (grTime1-grTime0);
           timeTot = timeTe0[ch+1][0] - timeTe0[ch][0]; // timeTe - (grTime1-grTime0)
-	  TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot); // tdcId,tdcCh,ch,mcp,pix,timeLe,timeTot
+	  TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	  fEvent->AddHit(hit);
 	}
       }
@@ -190,7 +202,7 @@ void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1920,
   gMode=mode;
 
 
-  TFile f("calibAll.root");
+  TFile f("calib.root");
   TIter nextkey(f.GetListOfKeys());
   TKey *key;
 
