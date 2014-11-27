@@ -92,7 +92,7 @@ void CreateMap(){
  for(Int_t ch=0; ch<maxch; ch++){
     Int_t mcp = ch/128;
     Int_t pix = (ch - mcp*128)/2;
-    Int_t col = 7-(pix/2 - 8*(pix/16));
+    Int_t col = pix/2 - 8*(pix/16);
     Int_t row = pix%2 + 2*(pix/16);
     pix = col*8+row;
     chmap[mcp][pix]=ch;
@@ -188,11 +188,7 @@ Bool_t TTSelector::Process(Long64_t entry){
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
       Int_t mcp = ch/128;
       Int_t pix = (ch - mcp*128)/2;
-      
-      //Int_t  col = 7-pix/8;
-      //Int_t  row = pix%8;
-
-
+     
       Int_t col = pix/2 - 8*(pix/16);
       Int_t row = pix%2 + 2*(pix/16);
 
@@ -207,7 +203,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	if(mcp==13 && pix==62) continue;
 	if(mcp==14 && pix==28) continue;
 	if(mcp==10 && pix==46) continue;
-	pix = col+8*row;
+	//	pix = col+8*row;
 
 	if(mcp<15){
 	  fhDigi[mcp]->Fill(col,row);
