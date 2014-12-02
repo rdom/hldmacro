@@ -119,7 +119,7 @@ void TTSelector::SlaveBegin(TTree *){
   for(Int_t m=0; m<nmcp; m++){
     for(Int_t p=0; p<npix; p++){
      
-      hTimeL[m][p] = new TH1F(Form("hTimeL_mcp%dpix%d",m,p), Form("hTimeL_%d_%d",m,p) , 500,80,110);
+      hTimeL[m][p] = new TH1F(Form("hTimeL_mcp%dpix%d",m,p), Form("hTimeL_%d_%d",m,p) , 500,-100,-50);
       hTimeT[m][p] = new TH1F(Form("hTimeT_mcp%dpix%d",m,p), Form("hTimeT_%d_%d",m,p) , 500,80,110);
       hTot[m][p] = new TH1F(Form("hTot_mcp%dpix%d",m,p), Form("hTot_%d_%d",m,p) , 1000,-15,15);
       hShape[m][p] = new TH2F(Form("hShape_mcp%dpix%d",m,p), Form("hShape_%d_%d",m,p) , 400,80,110,130,-5,35);
@@ -174,17 +174,20 @@ Bool_t TTSelector::Process(Long64_t entry){
     ch = 32*trbSeqId+Hits_nTdcChannel[i];
     if(++mult[ch]>50) continue;
     timeTe0[ch][mult[ch]]=Hits_fTime[i];
-    if(Hits_nTdcChannel[i]==0 && Hits_bIsRefChannel[i]) {
+    if(Hits_nTdcChannel[i]==0) { //ref channel
       trbRefTime[trbSeqId] = Hits_fTime[i];
-      if((ch-gTrigger)<64 && (ch-gTrigger)>=0) grTime0 = Hits_fTime[i];
+      if((gTrigger-ch)<=32 && (gTrigger-ch)>0) grTime0 = Hits_fTime[i];
     }
-    if(ch==gTrigger+1) grTime1 = Hits_fTime[i];
+
+    if(ch==gTrigger) grTime1 = Hits_fTime[i];
   }
 
   if((grTime0>0 && grTime1>0) || gTrigger==0){
     for(Int_t i=0; i<Hits_; i++){
+      if(Hits_nTrbAddress[i]==0) continue;
       //    Double_t fHitTimeCoarse = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
       trbSeqId = tdcmap[Hits_nTrbAddress[i]];
+
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
       Int_t mcp = ch/128;
       Int_t pix = (ch - mcp*128)/2;
@@ -192,18 +195,17 @@ Bool_t TTSelector::Process(Long64_t entry){
       Int_t col = pix/2 - 8*(pix/16);
       Int_t row = pix%2 + 2*(pix/16);
 
-      if(ch%2==0 || Hits_bIsRefChannel[i]) continue; // go away trailing edge and ref channel
-      hCh->Fill(ch-1);
+      if(ch%2==0 || Hits_bIsRefChannel[i]) continue; // go away trailing edge
+      hCh->Fill(ch);
       if(ch<3000) {
 	// bad pixels
 	pix = 8*col+row;
-	if(mcp==0  && pix==0) continue;
 	if(mcp==2  && pix==55) continue;
 	if(mcp==2  && pix==62) continue;
 	if(mcp==13 && pix==62) continue;
 	if(mcp==14 && pix==28) continue;
 	if(mcp==10 && pix==46) continue;
-	//	pix = col+8*row;
+	pix = col+8*row;
 
 	if(mcp<15){
 	  fhDigi[mcp]->Fill(col,row);
@@ -212,7 +214,8 @@ Bool_t TTSelector::Process(Long64_t entry){
 	  
 	  hFine[fileid][ch]->Fill(Hits_nFineTime[i]);
 	  hFine[fileid][ch]->SetTitle(Form("ch %d m%dp%d ",ch, mcp, pix));
-	  hTimeL[mcp][pix]->Fill(timeLe - (grTime1-grTime0));
+	  hTimeL[mcp][pix]->Fill(timeLe - (grTime1-grTime0)); 
+	  //  hTimeL[mcp][pix]->Fill( grTime0); 
 	  hTimeT[mcp][pix]->Fill(timeTe - (grTime1-grTime0));
 	  hShape[mcp][pix]->Fill(timeLe - (grTime1-grTime0),offset);
 	  hShape[mcp][pix]->Fill(timeTe - (grTime1-grTime0),offset);
@@ -543,7 +546,7 @@ MyMainFrame::~MyMainFrame(){
   delete fTime;
 }
 
-void tdisplay(TString inFile= "file.hld.root", Int_t trigger=1952, Int_t mode =0){
+void tdisplay(TString inFile= "file.hld.root", Int_t trigger=1920, Int_t mode =0){ //1952
   //inFile= "data/dirc/scan1/th_1*.hld.root";
   ginFile = inFile;
   gTrigger = trigger;

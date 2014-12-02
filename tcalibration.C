@@ -66,7 +66,7 @@ Int_t pixmap[tdcmax];
 Int_t chmap[nmcp][npix];
 
 Int_t gComboId=0;
-TGraph *gGr[nmcp][npix];
+TGraph *gGr[maxch];
 
 void CreateMap(){
   Int_t seqid =0;
@@ -88,7 +88,7 @@ void CreateMap(){
     Int_t col = 7-(pix/2 - 8*(pix/16));
     Int_t row = pix%2 + 2*(pix/16);
     pix = col*8+row;
-    std::cout<<"ch  "<<ch <<"  m "<<mcp <<"  p  "<<pix <<std::endl;
+    //std::cout<<"ch  "<<ch <<"  m "<<mcp <<"  p  "<<pix <<std::endl;
     
     chmap[mcp][pix]=ch;
   }
@@ -107,6 +107,28 @@ void TTSelector::Begin(TTree *){
   fTree = new TTree("M","Tree for GSI Prt Analysis");  
   fEvent = new TPrtEvent();
   fTree->Branch("TPrtEvent", "TPrtEvent", &fEvent, 64000, 2);
+
+  TFile f("../../data/calib.root");
+  TIter nextkey(f.GetListOfKeys());
+  TKey *key;
+
+  while (key = (TKey*)nextkey()) {
+    TGraph *gr = (TGraph*)key->ReadObj();
+    TString name = gr->GetName();
+    Int_t channel = name.Atoi();
+    
+    gGr[channel]= new TGraph(*gr);
+    
+    // TCanvas *can = new TCanvas("can","can",800,500);
+    // std::cout<<" gGr["<<channel<<"]  "<<gGr[channel]->GetN()  <<std::endl;   
+    // gGr[channel]->Draw("AL");
+    // can->Modified();
+    // can->Update();
+    // can->WaitPrimitive();
+  }
+  f.Close();
+
+
 }
 
 //Double_t time[50000];
@@ -122,6 +144,8 @@ Bool_t TTSelector::Process(Long64_t entry){
   for(Int_t i=0; i<Hits_; i++){
     trbSeqId = tdcmap[Hits_nTrbAddress[i]];
     ch = 32*trbSeqId+Hits_nTdcChannel[i];
+    //std::cout<<"ch  "<<ch <<std::endl;
+    
     if(++mult[ch]>50) continue;
     Int_t mcp = ch/128;
     Int_t pix = (ch - mcp*128)/2;
@@ -130,7 +154,11 @@ Bool_t TTSelector::Process(Long64_t entry){
     pix = col*8+row;
     Double_t coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
  
-    if(mcp<15) time[i] = coarseTime-gGr[mcp][pix]->Eval(Hits_nFineTime[i]);
+    Int_t chid = ch;
+    if(ch%2==0 && ch!=0) chid = ch-1;
+    //std::cout<<"gGr["<<chid<<"]  "<<gGr[chid]->GetN() <<std::endl;
+    
+    if(mcp<15) time[i] = coarseTime-gGr[chid]->Eval(Hits_nFineTime[i]);
     else time[i] = coarseTime;
     
     timeTe0[ch][mult[ch]]=time[i];
@@ -202,28 +230,6 @@ void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1920,
   gMode=mode;
 
 
-  TFile f("calib.root");
-  TIter nextkey(f.GetListOfKeys());
-  TKey *key;
-
-  const Int_t nmcp = 15, npix = 64;
-  while (key = (TKey*)nextkey()) {
-    TGraph *gr = (TGraph*)key->ReadObj();
-    TString name = gr->GetName();
-    TObjArray *sarr = name.Tokenize("_");
-        
-    Int_t mcp = ((TObjString*)sarr->At(0))->GetString().Atoi();
-    Int_t pix = ((TObjString*)sarr->At(1))->GetString().Atoi();
-    
-    // gr->Draw("AL");
-    // can->Modified();
-    // can->Update();
-    // can->WaitPrimitive();
-
-    gGr[mcp][pix]=(TGraph*)key->ReadObj();
-  }
-  f.Close();
-
   TChain* ch = new TChain("T");
   ch->Add(ginFile);
   
@@ -232,7 +238,6 @@ void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1920,
  
   TTSelector *selector = new TTSelector();
   TString option = Form("%d %d",gTrigger,gMode);
-  std::cout<<"1111 " <<std::endl;
   
   ch->Process(selector,option,entries);
 }
