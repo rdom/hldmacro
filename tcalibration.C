@@ -67,6 +67,8 @@ Int_t chmap[nmcp][npix];
 
 Int_t gComboId=0;
 TGraph *gGr[maxch];
+TH1F  *hL = new TH1F("hL", "hL" , 500,-100,-50);
+
 
 void CreateMap(){
   Int_t seqid =0;
@@ -99,6 +101,7 @@ void TTSelector::Begin(TTree *){
   TString option = GetOption();
   TObjArray *strobj = option.Tokenize(" ");
   gTrigger = ((TObjString*)strobj->At(0))->GetString().Atoi();
+  
   gMode = ((TObjString*)strobj->At(1))->GetString().Atoi();
   CreateMap();
   TString filedir=ginFile;
@@ -147,31 +150,26 @@ Bool_t TTSelector::Process(Long64_t entry){
     //std::cout<<"ch  "<<ch <<std::endl;
     
     if(++mult[ch]>50) continue;
-    Int_t mcp = ch/128;
-    Int_t pix = (ch - mcp*128)/2;
-    Int_t col = 7-(pix/2 - 8*(pix/16));
-    Int_t row = pix%2 + 2*(pix/16);
-    pix = col*8+row;
     Double_t coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
  
     Int_t chid = ch;
     if(ch%2==0 && ch!=0) chid = ch-1;
-    //std::cout<<"gGr["<<chid<<"]  "<<gGr[chid]->GetN() <<std::endl;
     
-    if(mcp<15) time[i] = coarseTime-gGr[chid]->Eval(Hits_nFineTime[i]);
-    else time[i] = coarseTime;
-    
-    timeTe0[ch][mult[ch]]=time[i];
-    if(Hits_nTdcChannel[i]==0 && Hits_bIsRefChannel[i]) {
+    time[i] = Hits_fTime[i] ;//
+    //time[i] = coarseTime-gGr[chid]->Eval(Hits_nFineTime[i]);
+    // std::cout<<"dtime   "<<gGr[chid]->Eval(Hits_nFineTime[i]) <<std::endl;
+    if(++mult[ch]>50) continue;
+    timeTe0[ch][mult[ch]]=Hits_fTime[i];
+    if(Hits_nTdcChannel[i]==0) {  // is ref channel
       trbRefTime[trbSeqId] = time[i];
-      if((ch-gTrigger)<64 && (ch-gTrigger)>=0) grTime0 = time[i];
+      if((gTrigger-ch)<=32 && (gTrigger-ch)>0) grTime0 = time[i];
     }
-    if(ch==gTrigger+1) grTime1 = time[i];
+    if(ch==gTrigger) grTime1 = time[i];
   }
 
   if((grTime0>0 && grTime1>0) || gTrigger==0){
     for(Int_t i=0; i<Hits_; i++){
-      // Double_t fHitTimeCoarse = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
+      if(Hits_nTrbAddress[i]==0) continue;
       trbSeqId = tdcmap[Hits_nTrbAddress[i]];
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
       Int_t mcp = ch/128;
@@ -181,7 +179,7 @@ Bool_t TTSelector::Process(Long64_t entry){
       pix = col*8+row;
 
       if(ch%2==0) continue; // go away trailing edge
-      if(ch<3000 && !Hits_bIsRefChannel[i]) {
+      if(ch<3000) {
 	// bad pixels
 	// if(mcp==2  && pix==55) continue;
 	// if(mcp==2  && pix==62) continue;
@@ -195,6 +193,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	  timeTe = timeTe0[ch+1][0]-trbRefTime[trbSeqId];
 	  
 	  timeLe = timeLe - (grTime1-grTime0);
+	  hL->Fill(timeLe);
           timeTot = timeTe0[ch+1][0] - timeTe0[ch][0]; // timeTe - (grTime1-grTime0)
 	  TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	  fEvent->AddHit(hit);
@@ -221,10 +220,12 @@ Bool_t TTSelector::Process(Long64_t entry){
 void TTSelector::Terminate(){
   fFile->Write();
   fFile->Close();
+
+  hL->Draw();
 }
 
 
-void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1920, Int_t mode =0){
+void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1921, Int_t mode =0){
   ginFile = inFile;
   gTrigger = trigger;
   gMode=mode;

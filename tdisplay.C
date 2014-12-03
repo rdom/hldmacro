@@ -178,26 +178,23 @@ Bool_t TTSelector::Process(Long64_t entry){
       trbRefTime[trbSeqId] = Hits_fTime[i];
       if((gTrigger-ch)<=32 && (gTrigger-ch)>0) grTime0 = Hits_fTime[i];
     }
-
     if(ch==gTrigger) grTime1 = Hits_fTime[i];
   }
 
   if((grTime0>0 && grTime1>0) || gTrigger==0){
     for(Int_t i=0; i<Hits_; i++){
-      if(Hits_nTrbAddress[i]==0) continue;
-      //    Double_t fHitTimeCoarse = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
       trbSeqId = tdcmap[Hits_nTrbAddress[i]];
-
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
-      Int_t mcp = ch/128;
-      Int_t pix = (ch - mcp*128)/2;
-     
-      Int_t col = pix/2 - 8*(pix/16);
-      Int_t row = pix%2 + 2*(pix/16);
+   
+      hFine[fileid][ch]->Fill(Hits_nFineTime[i]);
 
-      if(ch%2==0 || Hits_bIsRefChannel[i]) continue; // go away trailing edge
+      if(ch%2==0 || Hits_nTrbAddress[i]==0) continue; // go away trailing edge and ref channel
       hCh->Fill(ch);
       if(ch<3000) {
+	Int_t mcp = ch/128;
+	Int_t pix = (ch - mcp*128)/2;
+	Int_t col = pix/2 - 8*(pix/16);
+	Int_t row = pix%2 + 2*(pix/16);
 	// bad pixels
 	pix = 8*col+row;
 	if(mcp==2  && pix==55) continue;
@@ -211,8 +208,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	  fhDigi[mcp]->Fill(col,row);
 	  timeLe = Hits_fTime[i]-trbRefTime[trbSeqId];
 	  timeTe = timeTe0[ch][0]-trbRefTime[trbSeqId];
-	  
-	  hFine[fileid][ch]->Fill(Hits_nFineTime[i]);
+	  	 
 	  hFine[fileid][ch]->SetTitle(Form("ch %d m%dp%d ",ch, mcp, pix));
 	  hTimeL[mcp][pix]->Fill(timeLe - (grTime1-grTime0)); 
 	  //  hTimeL[mcp][pix]->Fill( grTime0); 
