@@ -150,8 +150,8 @@ void TTSelector::SlaveBegin(TTree *){
 }
 
 Bool_t TTSelector::Process(Long64_t entry){
-  Int_t trbSeqId,ch;
-  Double_t grTime0=0, grTime1=0,timeLe=0, timeTe=0, offset = 0;
+  Int_t trbSeqId,ch,mcp,pix,col,row;
+  Double_t grTime0(0), grTime1(0),timeLe(0), timeTe(0), offset(0);
 
   TString current_file_name  = TTSelector::fChain->GetCurrentFile()->GetName();
   TObjArray *sarr = current_file_name.Tokenize("_");
@@ -191,19 +191,19 @@ Bool_t TTSelector::Process(Long64_t entry){
       if(ch%2==0 || Hits_nTrbAddress[i]==0) continue; // go away trailing edge and ref channel
       hCh->Fill(ch);
       if(ch<3000) {
-	Int_t mcp = ch/128;
-	Int_t pix = (ch - mcp*128)/2;
-	Int_t col = pix/2 - 8*(pix/16);
-	Int_t row = pix%2 + 2*(pix/16);
-	// bad pixels
-	pix = 8*col+row;
-	if(mcp==2  && pix==55) continue;
-	if(mcp==2  && pix==62) continue;
-	if(mcp==13 && pix==62) continue;
-	if(mcp==14 && pix==28) continue;
-	if(mcp==10 && pix==46) continue;
+	mcp = ch/128;
+	pix = (ch%128)/2;	
+	col = pix/2 - 8*(pix/16);
+	row = pix%2 + 2*(pix/16);
 	pix = col+8*row;
 
+	if(gMode!=3){
+	  // noisy pixels
+	  if(mcp==2  && pix==55) continue;
+	  if(mcp==2  && pix==62) continue;
+	  if(mcp==14 && pix==35) continue;
+	}
+       
 	if(mcp<15){
 	  fhDigi[mcp]->Fill(col,row);
 	  timeLe = Hits_fTime[i]-trbRefTime[trbSeqId];
@@ -211,7 +211,6 @@ Bool_t TTSelector::Process(Long64_t entry){
 	  	 
 	  hFine[fileid][ch]->SetTitle(Form("ch %d m%dp%d ",ch, mcp, pix));
 	  hTimeL[mcp][pix]->Fill(timeLe - (grTime1-grTime0)); 
-	  //  hTimeL[mcp][pix]->Fill( grTime0); 
 	  hTimeT[mcp][pix]->Fill(timeTe - (grTime1-grTime0));
 	  hShape[mcp][pix]->Fill(timeLe - (grTime1-grTime0),offset);
 	  hShape[mcp][pix]->Fill(timeTe - (grTime1-grTime0),offset);
@@ -222,8 +221,8 @@ Bool_t TTSelector::Process(Long64_t entry){
   }
 
   for(Int_t i=0; i<Hits_; i++){
-    Int_t trbSeqId = tdcmap[Hits_nTrbAddress[i]];
-    Int_t ch = 32*trbSeqId+Hits_nTdcChannel[i];
+    trbSeqId = tdcmap[Hits_nTrbAddress[i]];
+    ch = 32*trbSeqId+Hits_nTdcChannel[i];
     mult[ch]=-1;
     for(Int_t j=0; j<50; j++){
       timeTe0[ch][j]=0; 
@@ -300,7 +299,7 @@ void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
       TString smcp = selected->GetName();
       smcp = smcp(3,smcp.Sizeof());
       Int_t mcp = smcp.Atoi();
-      Int_t pix = 8*(biny-1)+binx-1;
+      Int_t pix = 8*(binx-1)+biny-1;
   
       cTime->cd();
       drawHist(mcp,pix);

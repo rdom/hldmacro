@@ -115,7 +115,7 @@ void TTSelector::Begin(TTree *){
   TIter nextkey(f.GetListOfKeys());
   TKey *key;
 
-  while (key = (TKey*)nextkey()) {
+  while ((key = (TKey*)nextkey())) {
     TGraph *gr = (TGraph*)key->ReadObj();
     TString name = gr->GetName();
     Int_t channel = name.Atoi();
@@ -136,8 +136,8 @@ void TTSelector::Begin(TTree *){
 
 //Double_t time[50000];
 Bool_t TTSelector::Process(Long64_t entry){
-  Int_t trbSeqId,ch;
-  Double_t timeTot(0), grTime0=0, grTime1=0,timeLe=0, timeTe=0;
+  Int_t trbSeqId,ch,mcp,pix,col,row;;
+  Double_t timeTot(0), grTime0(0), grTime1(0),timeLe(0), timeTe(0);
   if(entry%1000==0) std::cout<<"event # "<< entry <<std::endl;
   Double_t time[50000];
   GetEntry(entry);
@@ -153,13 +153,14 @@ Bool_t TTSelector::Process(Long64_t entry){
     Double_t coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
  
     Int_t chid = ch;
-    if(ch%2==0 && ch!=0) chid = ch-1;
+    //if(ch%2==0 && ch!=0) chid = ch-1;
     
-    time[i] = Hits_fTime[i] ;//
+    //time[i] = Hits_fTime[i] ;//
+    time[i] = coarseTime-(Hits_nFineTime[i]-31)*0.0102;//0.0102;
     //time[i] = coarseTime-gGr[chid]->Eval(Hits_nFineTime[i]);
-    // std::cout<<"dtime   "<<gGr[chid]->Eval(Hits_nFineTime[i]) <<std::endl;
+
     if(++mult[ch]>50) continue;
-    timeTe0[ch][mult[ch]]=Hits_fTime[i];
+    timeTe0[ch][mult[ch]]=time[i];
     if(Hits_nTdcChannel[i]==0) {  // is ref channel
       trbRefTime[trbSeqId] = time[i];
       if((gTrigger-ch)<=32 && (gTrigger-ch)>0) grTime0 = time[i];
@@ -172,39 +173,29 @@ Bool_t TTSelector::Process(Long64_t entry){
       if(Hits_nTrbAddress[i]==0) continue;
       trbSeqId = tdcmap[Hits_nTrbAddress[i]];
       ch = 32*trbSeqId+Hits_nTdcChannel[i];
-      Int_t mcp = ch/128;
-      Int_t pix = (ch - mcp*128)/2;
-      Int_t col = 7-(pix/2 - 8*(pix/16));
-      Int_t row = pix%2 + 2*(pix/16);
-      pix = col*8+row;
+      mcp = ch/128;
+      pix = (ch%128)/2;	
+      col = pix/2 - 8*(pix/16);
+      row = pix%2 + 2*(pix/16);
+      pix = (7-col)*8+row;
 
       if(ch%2==0) continue; // go away trailing edge
       if(ch<3000) {
-	// bad pixels
-	// if(mcp==2  && pix==55) continue;
-	// if(mcp==2  && pix==62) continue;
-	// if(mcp==13 && pix==62) continue;
-	// if(mcp==14 && pix==28) continue;
-	// if(mcp==10 && pix==46) continue;
-	//if(mcp<15)
-	{
-
 	  timeLe = time[i]-trbRefTime[trbSeqId];
 	  timeTe = timeTe0[ch+1][0]-trbRefTime[trbSeqId];
 	  
 	  timeLe = timeLe - (grTime1-grTime0);
-	  hL->Fill(timeLe);
+	  if(ch == 363) hL->Fill(timeLe);
           timeTot = timeTe0[ch+1][0] - timeTe0[ch][0]; // timeTe - (grTime1-grTime0)
 	  TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	  fEvent->AddHit(hit);
-	}
       }
     }
   }
 
   for(Int_t i=0; i<Hits_; i++){
-    Int_t trbSeqId = tdcmap[Hits_nTrbAddress[i]];
-    Int_t ch = 32*trbSeqId+Hits_nTdcChannel[i];
+    trbSeqId = tdcmap[Hits_nTrbAddress[i]];
+    ch = 32*trbSeqId+Hits_nTdcChannel[i];
     mult[ch]=-1;
     for(Int_t j=0; j<50; j++){
       timeTe0[ch][j]=0; 
@@ -222,6 +213,8 @@ void TTSelector::Terminate(){
   fFile->Close();
 
   hL->Draw();
+  hL->Fit("gaus","V","E1",-80,-70);
+  gGr[363]->Draw("AP");
 }
 
 
