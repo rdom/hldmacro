@@ -1,7 +1,6 @@
 // tcalibration - routine for the prtdirc data calibration 
 // original author: Roman Dzhygadlo - GSI Darmstad
 
-
 #define TTSelector_cxx
 #include "prttools.C"
 
@@ -67,7 +66,7 @@ Int_t chmap[nmcp][npix];
 
 Int_t gComboId=0;
 TGraph *gGr[maxch];
-TH1F  *hL = new TH1F("hL", "hL" , 500,-100,-50);
+//TH1F  *hL = new TH1F("hL", "hL" , 500,150,200);
 
 
 void CreateMap(){
@@ -119,27 +118,20 @@ void TTSelector::Begin(TTree *){
     TGraph *gr = (TGraph*)key->ReadObj();
     TString name = gr->GetName();
     Int_t channel = name.Atoi();
-    
+
     gGr[channel]= new TGraph(*gr);
-    
-    // TCanvas *can = new TCanvas("can","can",800,500);
-    // std::cout<<" gGr["<<channel<<"]  "<<gGr[channel]->GetN()  <<std::endl;   
-    // gGr[channel]->Draw("AL");
-    // can->Modified();
-    // can->Update();
-    // can->WaitPrimitive();
   }
   f.Close();
 
 
 }
 
-//Double_t time[50000];
 Bool_t TTSelector::Process(Long64_t entry){
   Int_t trbSeqId,ch,mcp,pix,col,row;;
-  Double_t timeTot(0), grTime0(0), grTime1(0),timeLe(0), timeTe(0);
-  if(entry%1000==0) std::cout<<"event # "<< entry <<std::endl;
+  Double_t timeTot(0), grTime0(0), grTime1(0),timeLe(0), timeTe(0),coarseTime;
   Double_t time[50000];
+  
+  if(entry%1000==0) std::cout<<"event # "<< entry <<std::endl;
   GetEntry(entry);
   
   fEvent = new TPrtEvent();
@@ -147,19 +139,11 @@ Bool_t TTSelector::Process(Long64_t entry){
   for(Int_t i=0; i<Hits_; i++){
     trbSeqId = tdcmap[Hits_nTrbAddress[i]];
     ch = 32*trbSeqId+Hits_nTdcChannel[i];
-    //std::cout<<"ch  "<<ch <<std::endl;
     
     if(++mult[ch]>50) continue;
-    Double_t coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
- 
-    Int_t chid = ch;
-    //if(ch%2==0 && ch!=0) chid = ch-1;
-    
-    //time[i] = Hits_fTime[i] ;//
-    time[i] = coarseTime-(Hits_nFineTime[i]-31)*0.0102;//0.0102;
-    //time[i] = coarseTime-gGr[chid]->Eval(Hits_nFineTime[i]);
+    coarseTime = 5*(Hits_nEpochCounter[i]*pow(2.0,11) + Hits_nCoarseTime[i]);
+    time[i] = coarseTime-gGr[ch]->Eval(Hits_nFineTime[i]);
 
-    if(++mult[ch]>50) continue;
     timeTe0[ch][mult[ch]]=time[i];
     if(Hits_nTdcChannel[i]==0) {  // is ref channel
       trbRefTime[trbSeqId] = time[i];
@@ -181,12 +165,10 @@ Bool_t TTSelector::Process(Long64_t entry){
 
       if(ch%2==0) continue; // go away trailing edge
       if(ch<3000) {
-	  timeLe = time[i]-trbRefTime[trbSeqId];
-	  timeTe = timeTe0[ch+1][0]-trbRefTime[trbSeqId];
-	  
+	timeLe = time[i]-trbRefTime[trbSeqId];
 	  timeLe = timeLe - (grTime1-grTime0);
-	  if(ch == 363) hL->Fill(timeLe);
-          timeTot = timeTe0[ch+1][0] - timeTe0[ch][0]; // timeTe - (grTime1-grTime0)
+	  // if(ch == 241) hL->Fill(timeLe);
+          timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
 	  TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	  fEvent->AddHit(hit);
       }
@@ -196,7 +178,7 @@ Bool_t TTSelector::Process(Long64_t entry){
   for(Int_t i=0; i<Hits_; i++){
     trbSeqId = tdcmap[Hits_nTrbAddress[i]];
     ch = 32*trbSeqId+Hits_nTdcChannel[i];
-    mult[ch]=-1;
+    mult[ch]=0;
     for(Int_t j=0; j<50; j++){
       timeTe0[ch][j]=0; 
     }
@@ -212,26 +194,22 @@ void TTSelector::Terminate(){
   fFile->Write();
   fFile->Close();
 
-  hL->Draw();
-  hL->Fit("gaus","V","E1",-80,-70);
-  gGr[363]->Draw("AP");
+  // hL->Draw();
+  // hL->Fit("gaus","V","E1",175,185);
 }
 
 
-void tcalibration(TString inFile= "../../data/cc2.hld.root", Int_t trigger=1921, Int_t mode =0){
+void tcalibration(TString inFile= "../../data/cj.hld.root", Int_t trigger=2560, Int_t mode =0){ //1920
   ginFile = inFile;
-  gTrigger = trigger;
+  gTrigger = trigger+1;
   gMode=mode;
-
 
   TChain* ch = new TChain("T");
   ch->Add(ginFile);
   
   Int_t entries = ch->GetEntries();
   std::cout<<"Entries in chain:  "<< entries<<std::endl;
- 
   TTSelector *selector = new TTSelector();
   TString option = Form("%d %d",gTrigger,gMode);
-  
   ch->Process(selector,option,entries);
 }
