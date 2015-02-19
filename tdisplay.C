@@ -39,9 +39,9 @@ const Int_t nmcp = 15, npix = 64;
 TString fileList[maxfiles];
 
 TH1F *hFine[maxfiles][maxch];
+TH1F *hTot[maxfiles][maxch];
 TH1F *hTimeL[nmcp][npix];
 TH1F *hTimeT[nmcp][npix];
-TH1F *hTot[nmcp][npix];
 TH2F *hShape[nmcp][npix];
 
 TH1F *hCh;
@@ -113,7 +113,10 @@ void TTSelector::SlaveBegin(TTree *){
   for(Int_t j=0; j<nfiles; j++){
     for(Int_t c=0; c<maxch; c++){
       hFine[j][c] = new TH1F(Form("hFine_%d_ch%d",j,c),Form("hFine_%d_ch%d",j,c) , 600,1,600);
+      hTot[j][c] = new TH1F(Form("hTot_%d_ch%d",j,c), Form("hTot_%d_ch%d",j,c) , 500,-5,5);
+      hTot[j][c]->SetLineColor(j+1);
       fOutput->Add(hFine[j][c]);
+      fOutput->Add(hTot[j][c]);
     }
   }
   for(Int_t m=0; m<nmcp; m++){
@@ -121,12 +124,10 @@ void TTSelector::SlaveBegin(TTree *){
      
       hTimeL[m][p] = new TH1F(Form("hTimeL_mcp%dpix%d",m,p), Form("hTimeL_%d_%d",m,p) , 500,-100,-50);
       hTimeT[m][p] = new TH1F(Form("hTimeT_mcp%dpix%d",m,p), Form("hTimeT_%d_%d",m,p) , 500,80,110);
-      hTot[m][p] = new TH1F(Form("hTot_mcp%dpix%d",m,p), Form("hTot_%d_%d",m,p) , 1000,-15,15);
       hShape[m][p] = new TH2F(Form("hShape_mcp%dpix%d",m,p), Form("hShape_%d_%d",m,p) , 400,80,110,130,-5,35);
 
       fOutput->Add(hTimeL[m][p]);
       fOutput->Add(hTimeT[m][p]);
-      fOutput->Add(hTot[m][p]);
       fOutput->Add(hShape[m][p]);
     }
 
@@ -214,7 +215,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	  hTimeT[mcp][pix]->Fill(timeTe - (grTime1-grTime0));
 	  hShape[mcp][pix]->Fill(timeLe - (grTime1-grTime0),offset);
 	  hShape[mcp][pix]->Fill(timeTe - (grTime1-grTime0),offset);
-	  hTot[mcp][pix]->Fill(timeTe0[ch][0] - timeTe0[ch+1][0]);
+	  hTot[fileid][ch]->Fill(timeTe0[ch+1][0] - timeTe0[ch][0]);
 	}
       }
     }
@@ -274,6 +275,14 @@ TString drawHist(Int_t m, Int_t p){
     hCh->Draw();
     histname=hCh->GetName();
   }
+  if(gComboId==5){
+    for(Int_t j=0; j<nfiles; j++){
+      if(j==0) hTot[j][ch]->Draw();
+      else hTot[j][ch]->Draw("same");
+    }
+    histname=hTot[0][ch]->GetName();
+  }
+
   return histname;
 }
 
@@ -404,17 +413,18 @@ void TTSelector::Terminate(){
     for (Int_t p=0; p < npix; p++) {
       hTimeL[m][p] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hTimeL_mcp%dpix%d",m,p), fOutput));
       hTimeT[m][p] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hTimeT_mcp%dpix%d",m,p), fOutput));
-      hTot[m][p] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hTot_mcp%dpix%d",m,p), fOutput));
       hShape[m][p] = dynamic_cast<TH2F *>(TProof::GetOutput(Form("hShape_mcp%dpix%d",m,p), fOutput));
     }
-    for(Int_t j=0; j<nfiles; j++){
-      for(Int_t c=0; c<maxch; c++){
-	hFine[j][c] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hFine_%d_ch%d",j,c), fOutput));
-      }
-    }
-
     fhDigi[m] = dynamic_cast<TH2F *>(TProof::GetOutput(Form("mcp%d", m), fOutput));
   }
+
+  for(Int_t j=0; j<nfiles; j++){
+    for(Int_t c=0; c<maxch; c++){
+      hFine[j][c] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hFine_%d_ch%d",j,c), fOutput));
+      hTot[j][c] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("hTot_%d_ch%d",j,c), fOutput));
+    }
+  }
+
   hCh = dynamic_cast<TH1F *>(TProof::GetOutput("hCh", fOutput));
   Calibrate();
 }
@@ -459,6 +469,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   fComboMode->AddEntry("Calibration graph", 0);
   fComboMode->AddEntry("Fine time", 1);
   fComboMode->AddEntry("Le time", 2);
+  fComboMode->AddEntry("TOT time", 5);
   fComboMode->AddEntry("Signal shape", 3);
   fComboMode->AddEntry("Channels", 4);
   fComboMode->Connect("Selected(Int_t)", "MyMainFrame", this, "updatePlot(Int_t)");
