@@ -299,18 +299,18 @@ Bool_t MSelector::Process(Long64_t entry){
       else if(gTimeCutMin!=gTimeCutMax &&  (timeDiff<gTimeCutMin || timeDiff>gTimeCutMax)) continue;
       hitCount2++;
 	
-      if(gsTotMean!="0"
-){
+      if(gsTotMean!="0"){
 	timeDiff += 0.3*(tot - gTotMean[mcp][col+8*row]);
       }
 
       if(refLe!=-1 || gTrigger==0) {
 	fhDigi[mcp]->Fill(col, row);
 	if(gMode==1){
-	  hLeTot[mcp][col+8*row]->SetTitle(Form("ch %d",hit.GetChannel()));
-	  hLeTot[mcp][col+8*row]->Fill(timeDiff,tot);
-	  hShape[mcp][pix]->Fill(timeDiff,offset);
-	  hShape[mcp][pix]->Fill(timeDiff + tot,offset);
+	  Int_t tpix = col+8*row;
+	  hLeTot[mcp][tpix]->SetTitle(Form("ch %d",hit.GetChannel()));
+	  hLeTot[mcp][tpix]->Fill(timeDiff,tot);
+	  hShape[mcp][tpix]->Fill(timeDiff,offset);
+	  hShape[mcp][tpix]->Fill(timeDiff + tot,offset);
 	}
 	hPTime[mcp][col+8*row]->Fill(timeDiff);
 	hPTime[mcp][col+8*row]->SetTitle(Form("%d " ,hit.GetChannel()));
