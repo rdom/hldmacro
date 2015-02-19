@@ -40,7 +40,7 @@ TString fileList[maxfiles];
 
 TH1F *hCh;
 
-TString ginFile="";
+TString ginFile(""), gcFile("");
 Int_t gTrigger(0), gMode(0);;
 
 const Int_t tdcnum(88);
@@ -51,7 +51,6 @@ TString trbsid[tdcnum] =
    ,"1010","1011","1012","1013","1110","1111","1112","1113","1210","1211","1212","1213","1310","1311","1312","1313","1410","1411","1412","1413"
    ,"1510","1511","1512","1513","1610","1611","1612","1613","1710","1711","1712","1713","1810","1811","1812","1813","1910","1911","1912","1913"
    ,"2010","2011","2012","2013","2110","2111","2112","2113"};
-
 
 Int_t tdcid[tdcnum];
 Double_t trbRefTime[tdcnum];
@@ -67,7 +66,6 @@ Int_t chmap[nmcp][npix];
 Int_t gComboId=0;
 TGraph *gGr[maxch];
 //TH1F  *hL = new TH1F("hL", "hL" , 500,150,200);
-
 
 void CreateMap(){
   Int_t seqid =0;
@@ -93,7 +91,6 @@ void CreateMap(){
     
     chmap[mcp][pix]=ch;
   }
-
 }
 
 void TTSelector::Begin(TTree *){
@@ -104,13 +101,13 @@ void TTSelector::Begin(TTree *){
   gMode = ((TObjString*)strobj->At(1))->GetString().Atoi();
   CreateMap();
   TString filedir=ginFile;
-  filedir.Remove(filedir.Last('.'));
+  filedir.Remove(filedir.Last('.')-4);
   fFile = new TFile(filedir+"C.root","RECREATE");
   fTree = new TTree("M","Tree for GSI Prt Analysis");  
   fEvent = new TPrtEvent();
   fTree->Branch("TPrtEvent", "TPrtEvent", &fEvent, 64000, 2);
 
-  TFile f("../../data/calib.root");
+  TFile f(gcFile);
   TIter nextkey(f.GetListOfKeys());
   TKey *key;
 
@@ -122,8 +119,6 @@ void TTSelector::Begin(TTree *){
     gGr[channel]= new TGraph(*gr);
   }
   f.Close();
-
-
 }
 
 Bool_t TTSelector::Process(Long64_t entry){
@@ -151,7 +146,7 @@ Bool_t TTSelector::Process(Long64_t entry){
     }
     if(ch==gTrigger) grTime1 = time[i];
   }
-
+  
   if((grTime0>0 && grTime1>0) || gTrigger==0){
     for(Int_t i=0; i<Hits_; i++){
       if(Hits_nTrbAddress[i]==0) continue;
@@ -162,15 +157,16 @@ Bool_t TTSelector::Process(Long64_t entry){
       col = pix/2 - 8*(pix/16);
       row = pix%2 + 2*(pix/16);
       pix = (7-col)*8+row;
-
+      
       if(ch%2==0) continue; // go away trailing edge
       if(ch<3000) {
 	timeLe = time[i]-trbRefTime[trbSeqId];
-	  timeLe = timeLe - (grTime1-grTime0);
-	  // if(ch == 241) hL->Fill(timeLe);
-          timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
-	  TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
-	  fEvent->AddHit(hit);
+	timeLe = timeLe - (grTime1-grTime0);
+	  
+	// if(ch == 241) hL->Fill(timeLe);
+	timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
+	TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
+	fEvent->AddHit(hit);
       }
     }
   }
@@ -198,9 +194,9 @@ void TTSelector::Terminate(){
   // hL->Fit("gaus","V","E1",175,185);
 }
 
-
-void tcalibration(TString inFile= "../../data/cj.hld.root", Int_t trigger=2560, Int_t mode =0){ //1920
+void tcalibration(TString inFile= "../../data/cj.hld.root", TString cFile= "calib.root", Int_t trigger=2560, Int_t mode =0){ //1920
   ginFile = inFile;
+  gcFile = cFile;
   gTrigger = trigger+1;
   gMode=mode;
 
