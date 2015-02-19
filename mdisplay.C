@@ -948,6 +948,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   else fEdit1->SetText("300 0 60");
 
   fEdit2->SetText("200 -5 2");
+  if(gTrigger==1952 || gTrigger==1956) fEdit2->SetText("200 -2 5");
   fEdit3->SetText("0 0");
   fEdit4->SetText("0 0");
   fNumber->SetIntNumber(gTrigger);
