@@ -83,6 +83,7 @@ void CreateMap(){
       }
     }
   }
+
   for(Int_t ch=0; ch<maxch; ch++){
     Int_t mcp = ch/128;
     Int_t pix = (ch - mcp*128)/2;
@@ -122,18 +123,20 @@ void TTSelector::Begin(TTree *){
   }
   f.Close();
 
-  TFile f2(gtFile);
-  TIter nextkey2(f2.GetListOfKeys());
-  TKey *key2;
+  if(gMode == 1){
+    TFile f2(gtFile);
+    TIter nextkey2(f2.GetListOfKeys());
+    TKey *key2;
 
-  while ((key2 = (TKey*)nextkey2())) {
-    TGraph *gr = (TGraph*)key2->ReadObj();
-    TString name = gr->GetName();
-    Int_t channel = name.Atoi();
+    while ((key2 = (TKey*)nextkey2())) {
+      TGraph *gr = (TGraph*)key2->ReadObj();
+      TString name = gr->GetName();
+      Int_t channel = name.Atoi();
 
-    gGrDiff[channel]= new TGraph(*gr);
+      gGrDiff[channel]= new TGraph(*gr);
+    }
+    f2.Close();
   }
-  f2.Close();
   std::cout<<"Initialization successful"<<std::endl;
   
 }
@@ -184,7 +187,7 @@ Bool_t TTSelector::Process(Long64_t entry){
 	
 	//std::cout<<"ch  "<<ch <<  "  timeTot  " <<timeTot <<"  offset "<< gGrDiff[ch]->Eval(timeTot) <<std::endl;
 	
-	timeLe -= gGrDiff[ch]->Eval(timeTot);
+	if(gMode == 1) timeLe -= gGrDiff[ch]->Eval(timeTot);
 
 	TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	fEvent->AddHit(hit);
