@@ -50,6 +50,10 @@ TH2F *hLeTot[nmcp][npix];
 TH2F *hShape[nmcp][npix];
 
 MSelector            *fSelector;
+const Int_t maxch =2000;
+TGraph *gGrDiff[maxch];
+Int_t chmap[nmcp][npix];
+
 const Int_t maxMult = 30;
 TH1F *hTotM[maxMult];
 TH1F *hLeM[maxMult];
@@ -102,6 +106,16 @@ void init(){
   fSelector = new MSelector();
   gStyle->SetOptStat(1001111);
   gStyle->SetOptFit(1111);
+
+  // create channel - mcp/pixel map
+  for(Int_t ch=0; ch<maxch; ch++){
+    Int_t mcp = ch/128;
+    Int_t pix = (ch - mcp*128)/2;
+    Int_t col = pix/2 - 8*(pix/16);
+    Int_t row = pix%2 + 2*(pix/16);
+    pix = row*8+col;
+    chmap[mcp][pix]=ch;
+  }
 }
 
 void MSelector::SlaveBegin(TTree *){
@@ -340,22 +354,22 @@ Bool_t MSelector::Process(Long64_t entry){
   return kTRUE;
 }
 
-TVector3 fit(TH1F *h){
+TF1 *gaust;
+TVector3 fit(TH1F *h, Double_t range = 3){
   int binmax = h->GetMaximumBin();
   double xmax = h->GetXaxis()->GetBinCenter(binmax);
-  TF1 *gaust = new TF1("gaust","gaus(0)",xmax-5,xmax+5);
+  gaust = new TF1("gaust","gaus(0)",xmax-range,xmax+range);
   Double_t integral = h->Integral(h->GetXaxis()->FindBin(xmax-0.6),h->GetXaxis()->FindBin(xmax+0.6));
   Double_t xxmin, xxmax, sigma1=0, mean1=0, sigma2, mean2;
   xxmax = xmax;
   xxmin = xxmax;
   Int_t nfound = 1, peakSearch = 1;
-  if(integral>0){ 
+  if(integral>5){ 
     
     if(peakSearch == 1){
-      gaust->SetParLimits(2,0,5);
-
+      gaust->SetParLimits(2,0.1,2);
       gaust->SetParameter(1,xmax);
-      gaust->SetParameter(2,1);
+      gaust->SetParameter(2,0.2);
     }
     
     if(peakSearch == 2){
@@ -363,7 +377,7 @@ TVector3 fit(TH1F *h){
       std::cout<<"nfound  "<<nfound <<std::endl;
       Float_t *xpeaks = spect->GetPositionX();
       if(nfound==1){
-	gaust =new TF1("gaust","gaus(0)",xmax-3,xmax+3);
+	gaust =new TF1("gaust","gaus(0)",xmax-range,xmax+range);
 	gaust->SetParameter(1,xpeaks[0]);
       }else if(nfound==2) {
 	if(xpeaks[0]>xpeaks[1]) {
@@ -373,7 +387,7 @@ TVector3 fit(TH1F *h){
 	  xxmax = xpeaks[1];
 	  xxmin = xpeaks[0];
 	}
-	gaust =new TF1("gaust","gaus(0)+gaus(3)",xmax-3,xmax+3);
+	gaust =new TF1("gaust","gaus(0)+gaus(3)",xmax-range,xmax+range);
 	gaust->SetParameter(1,xxmin);
 	gaust->SetParameter(4,xxmax);
       }
@@ -382,7 +396,7 @@ TVector3 fit(TH1F *h){
       gaust->SetParameter(5,0.3);
     }
 
-    h->Fit("gaust","","MQ",xxmin-3, xxmax+3);
+    h->Fit("gaust","","MQN",xxmin-range, xxmax+range);
     mean1 = gaust->GetParameter(1);
     sigma1 = gaust->GetParameter(2);
     if(sigma1>10) sigma1=10;
@@ -392,6 +406,7 @@ TVector3 fit(TH1F *h){
       sigma2 = (nfound==1) ? gaust->GetParameter(2) : gaust->GetParameter(5);
     }
   }
+  delete gaust;
   return TVector3(mean1,sigma1,0);
 }
 
@@ -408,9 +423,59 @@ void calculateTimeCut(){
   }
 }
 
+void getTimeOffset(){
+  std::cout<<"Creating calibration"<<std::endl;
+  TH1D* h;
+  TH2F* hh;
+  for (Int_t m=0; m <nmcp; m++) {
+    for(Int_t p=0; p<npix; p++){
+      Double_t mean = fit(hPTime[m][p],0.5).X();
+      hh =(TH2F*) hLeTot[m][p]->Clone("hh");
+      hh->RebinY(2);
+
+      // TF1 *gaust = new TF1("gaust","gaus(0)",85,105);
+      // gaust->SetParameter(1,90);
+      // gaust->SetParameter(2,0.3);
+      // hh->FitSlicesX(gaust,0,-1,10,"");
+      // TGraph * gg = new TGraph((TH1D*)gDirectory->Get("hh_1")); 
+      Int_t ch = chmap[m][p];
+      gGrDiff[ch] = new TGraph();
+      for (int i=0;i<100;i++){
+	Double_t x = hh->GetYaxis()->GetBinCenter(i);
+	h = hh->ProjectionX(Form("bin%d",i+1),i+1,i+2);
+	Double_t vx = fit((TH1F*)h,0.5).X();
+	if(vx==0) vx = mean;
+	gGrDiff[ch]->SetPoint(i,x,vx);
+      }
+
+      gGrDiff[ch]->SetName(Form("gCalib_ch%d",ch));
+      gGrDiff[ch]->GetXaxis()->SetTitle("fine bin, [#]");
+      gGrDiff[ch]->GetYaxis()->SetTitle("fine time, [ns]");
+    
+    }
+  }
+}
+
+void MyMainFrame::DoExportOffsets(){
+  TString filedir=ginFile;
+  filedir.Remove(filedir.Last('/'));
+  TFile efile(filedir+"/calibOffsets.root","RECREATE");
+  Int_t c;
+  for (Int_t m=0; m <nmcp; m++) {
+    for(Int_t p=0; p<npix; p++){
+      c = chmap[m][p];
+      gGrDiff[c]->SetName(Form("%d_%d_%d",c,m,p));
+      gGrDiff[c]->Write();
+    }
+  }
+  efile.Write();
+  efile.Close();
+  std::cout<<"Exporting .. Done"<<std::endl;
+}
+
 Bool_t lock = false;
 void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
-  if(gComboId==0 || gComboId==2 || gComboId==5 || gComboId==4 || gComboId==10){
+  if(gComboId==0 || gComboId==2 || gComboId==5 || gComboId==4 || gComboId==10 || gComboId==11){
     TCanvas *c = (TCanvas *) gTQSender;
     TPad *pad = (TPad *) c->GetSelectedPad();
     if (!pad) return;
@@ -441,6 +506,18 @@ void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
       if(gComboId==5) hPMult[mcp][pix]->Draw();      
       if(gComboId==4) hLeTot[mcp][pix]->Draw("colz");
       if(gComboId==10) hShape[mcp][pix]->Draw("colz");
+      if(gComboId==11){
+	Int_t ch = chmap[mcp][pix];
+	hLeTot[mcp][pix]->Draw("colz");
+	Double_t* x = gGrDiff[ch]->GetX();
+	Double_t* y = gGrDiff[ch]->GetY();
+	Int_t n = gGrDiff[ch]->GetN();
+
+	TGraph* gr = new TGraph(n,y,x);
+	gr->SetMarkerStyle(7);
+	gr->SetMarkerColor(2);
+	gr->Draw("P same");
+      }
       if(gMain->fCheckBtn2->GetState() == kButtonDown){
 	gMain->fEdit3->SetText(Form("%2.2f %2.2f", gTimeCuts[mcp][pix][0], gTimeCuts[mcp][pix][1]));
       }
@@ -521,6 +598,7 @@ void MyMainFrame::DoDraw(){
 
   fCheckBtn1->SetState(kButtonUp);
   
+  if(gMode==1) getTimeOffset();
   drawDigi("m,p,v\n",1);
   updatePlot(gComboId);
 }
@@ -645,7 +723,7 @@ void MyMainFrame::DoExport(){
   writeInfo("digi.csv", drawDigi("m,p,v\n",1), saveFlag);
   pbar->Reset();
   Float_t total = (nmcp-1)*(npix-1);
-  if(gComboId==0 || gComboId==2 || gComboId==5 || gComboId==4 || gComboId==10){
+  if(gComboId==0 || gComboId==2 || gComboId==5 || gComboId==4 || gComboId==10 || gComboId==11){
     for(Int_t m=0; m<nmcp; m++){
       for(Int_t p=0; p<npix; p++){
 	cExport->cd();
@@ -703,6 +781,7 @@ void MyMainFrame::DoSlider(Int_t pos){
   }
   
 }
+
 void MyMainFrame::DoCheckBtnClecked1(){
   Int_t state = -1;
   if(fCheckBtn1->GetState() != kButtonDown){
@@ -754,7 +833,6 @@ void MyMainFrame::DoCheckBtnClecked3(){
     gsTotMean="0";
   }
 }
-
 
 void MyMainFrame::DoExit(){
   gApplication->Terminate(0);
@@ -861,6 +939,10 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   fCheckBtn3->Connect("Clicked()", "MyMainFrame", this, "DoCheckBtnClecked3()");
   fHm2->AddFrame(fCheckBtn3, new TGLayoutHints(kLHintsBottom | kLHintsLeft,5, 5, 5, 5));
 
+  TGTextButton * fBtnExportOffsets = new TGTextButton(fHm2, "Export &offsets");
+  fBtnExportOffsets->Connect("Clicked()", "MyMainFrame", this, "DoExportOffsets()");
+  fHm2->AddFrame(fBtnExportOffsets, new TGLayoutHints(kLHintsBottom | kLHintsLeft,5, 5, 5, 5));
+
   fHm->AddFrame(fHm2, new TGLayoutHints(kLHintsExpandX | kLHintsCenterX,5, 5, 5, 5));
 
 
@@ -911,6 +993,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   if(gMode==1){
     fComboMode->AddEntry("Le vs. ToT", 4);
     fComboMode->AddEntry("Signal shape",10);
+    fComboMode->AddEntry("Offset graph",11);
   }
   fComboMode->AddEntry("Multiplicity",5);
   fComboMode->AddEntry("Multiplicity All",6);
@@ -941,7 +1024,8 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   fComboMode->Resize(300, 20);
   HideFrame(fHm);
 
-  if(gTrigger==0) fEdit1->SetText("400 -200 200");
+  //if(gTrigger==0) fEdit1->SetText("400 -200 200");
+  if(gTrigger==0) fEdit1->SetText("400 85 105");
   else if(gTrigger==1952 || gTrigger==1956) fEdit1->SetText("400 80 120");
   else if(gTrigger==1920) fEdit1->SetText("400 -100 -50");
   else if(gTrigger==2560) fEdit1->SetText("400 150 200");

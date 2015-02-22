@@ -40,7 +40,7 @@ TString fileList[maxfiles];
 
 TH1F *hCh;
 
-TString ginFile(""), gcFile("");
+TString ginFile(""), gcFile(""), gtFile("");
 Int_t gTrigger(0), gMode(0);;
 
 const Int_t tdcnum(88);
@@ -65,6 +65,8 @@ Int_t chmap[nmcp][npix];
 
 Int_t gComboId=0;
 TGraph *gGr[maxch];
+TGraph *gGrDiff[maxch];
+
 //TH1F  *hL = new TH1F("hL", "hL" , 500,150,200);
 
 void CreateMap(){
@@ -119,6 +121,21 @@ void TTSelector::Begin(TTree *){
     gGr[channel]= new TGraph(*gr);
   }
   f.Close();
+
+  TFile f2(gtFile);
+  TIter nextkey2(f2.GetListOfKeys());
+  TKey *key2;
+
+  while ((key2 = (TKey*)nextkey2())) {
+    TGraph *gr = (TGraph*)key2->ReadObj();
+    TString name = gr->GetName();
+    Int_t channel = name.Atoi();
+
+    gGrDiff[channel]= new TGraph(*gr);
+  }
+  f2.Close();
+  std::cout<<"Initialization successful"<<std::endl;
+  
 }
 
 Bool_t TTSelector::Process(Long64_t entry){
@@ -159,12 +176,16 @@ Bool_t TTSelector::Process(Long64_t entry){
       pix = (7-col)*8+row;
       
       if(ch%2==0) continue; // go away trailing edge
-      if(ch<3000) {
+      if(ch<1920) {
 	timeLe = time[i]-trbRefTime[trbSeqId];
-	timeLe = timeLe - (grTime1-grTime0);
-	  
-	// if(ch == 241) hL->Fill(timeLe);
+	timeLe = timeLe - (grTime1-grTime0);	  
+	//if(ch == 241) hL->Fill(timeLe);
 	timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
+	
+	//std::cout<<"ch  "<<ch <<  "  timeTot  " <<timeTot <<"  offset "<< gGrDiff[ch]->Eval(timeTot) <<std::endl;
+	
+	timeLe -= gGrDiff[ch]->Eval(timeTot);
+
 	TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	fEvent->AddHit(hit);
       }
@@ -194,9 +215,10 @@ void TTSelector::Terminate(){
   // hL->Fit("gaus","V","E1",175,185);
 }
 
-void tcalibration(TString inFile= "../../data/cj.hld.root", TString cFile= "calib.root", Int_t trigger=2560, Int_t mode =0){ //1920
+void tcalibration(TString inFile= "../../data/cj.hld.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560, Int_t mode =0){ //1920
   ginFile = inFile;
-  gcFile = cFile;
+  gcFile = cFile; // fine time calibration
+  gtFile = tFile; // pilas offsets + walk corrections
   gTrigger = trigger+1;
   gMode=mode;
 

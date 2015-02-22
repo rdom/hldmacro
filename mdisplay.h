@@ -38,6 +38,7 @@ public:
   void DoDraw();
   void DoMore();
   void DoExport();
+  void DoExportOffsets();
   void DoSlider(Int_t pos =0);
   void DoCheckBtnClecked1();
   void DoCheckBtnClecked2();
