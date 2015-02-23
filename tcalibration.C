@@ -40,7 +40,7 @@ TString fileList[maxfiles];
 
 TH1F *hCh;
 
-TString ginFile(""), gcFile(""), gtFile("");
+TString ginFile(""), goutFile(""), gcFile(""), gtFile("");
 Int_t gTrigger(0), gMode(0);;
 
 const Int_t tdcnum(88);
@@ -105,7 +105,7 @@ void TTSelector::Begin(TTree *){
   CreateMap();
   TString filedir=ginFile;
   filedir.Remove(filedir.Last('.')-4);
-  fFile = new TFile(filedir+"C.root","RECREATE");
+  fFile = new TFile(goutFile,"RECREATE");
   fTree = new TTree("M","Tree for GSI Prt Analysis");  
   fEvent = new TPrtEvent();
   fTree->Branch("TPrtEvent", "TPrtEvent", &fEvent, 64000, 2);
@@ -218,8 +218,9 @@ void TTSelector::Terminate(){
   // hL->Fit("gaus","V","E1",175,185);
 }
 
-void tcalibration(TString inFile= "../../data/cj.hld.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560, Int_t mode =0){ //1920
+void tcalibration(TString inFile= "../../data/cj.hld.root", TString outFile= "outFileC.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560, Int_t mode =0,  Int_t sEvent =0, Int_t eEvent=0){ //1920
   ginFile = inFile;
+  goutFile = outFile;
   gcFile = cFile; // fine time calibration
   gtFile = tFile; // pilas offsets + walk corrections
   gTrigger = trigger+1;
@@ -229,8 +230,13 @@ void tcalibration(TString inFile= "../../data/cj.hld.root", TString cFile= "cali
   ch->Add(ginFile);
   
   Int_t entries = ch->GetEntries();
-  std::cout<<"Entries in chain:  "<< entries<<std::endl;
   TTSelector *selector = new TTSelector();
   TString option = Form("%d %d",gTrigger,gMode);
-  ch->Process(selector,option,entries);
+  
+  if(eEvent==0){
+    std::cout<<"Entries in chain:  "<< entries<<std::endl;
+    ch->Process(selector,option,entries);
+  }else{
+    ch->Process(selector,option,eEvent-sEvent,sEvent); 
+  }
 }
