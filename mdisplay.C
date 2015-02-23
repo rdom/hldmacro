@@ -505,7 +505,7 @@ void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
       cTime->cd();
       if(gComboId==0) {
 	hPTime[mcp][pix]->Draw();
-	fit(hPTime[mcp][pix]);
+	fit(hPTime[mcp][pix],1);
 	hPTime[mcp][pix]->Draw("same");
       }
       if(gComboId==2) hPTot[mcp][pix]->Draw();   

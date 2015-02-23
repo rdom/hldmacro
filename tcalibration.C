@@ -185,8 +185,8 @@ Bool_t TTSelector::Process(Long64_t entry){
 	
 	//if(ch == 241) hL->Fill(timeLe);
 	
-	timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
-	if(gMode == 1) timeLe -= gGrDiff[ch]->Eval(timeTot);
+        timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
+	if(gMode == 1 && ch<1920) timeLe -= gGrDiff[ch]->Eval(timeTot);
 
 	TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
 	fEvent->AddHit(hit);
@@ -212,7 +212,6 @@ Bool_t TTSelector::Process(Long64_t entry){
 void TTSelector::Terminate(){
   fFile->Write();
   fFile->Close();
-
   // hL->Draw();
   // hL->Fit("gaus","V","E1",175,185);
 }
