@@ -217,7 +217,8 @@ void TTSelector::Terminate(){
   // hL->Fit("gaus","V","E1",175,185);
 }
 
-void tcalibration(TString inFile= "../../data/cj.hld.root", TString outFile= "outFileC.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560,  Int_t sEvent =0, Int_t eEvent=0){ //1920
+void tcalibration(TString inFile= "../../data/cj.hld.root", TString outFile= "outFileC.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560,  Int_t sEvent =0, Int_t eEvent=0, Int_t build = 0){ //1920
+  if(build==1) return;
   ginFile = inFile;
   goutFile = outFile;
   gcFile = cFile; // fine time calibration
