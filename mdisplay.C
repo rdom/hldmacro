@@ -245,8 +245,7 @@ Bool_t MSelector::Process(Long64_t entry){
   TPrtHit hit;
   Int_t mcp,pix, mult,col,row;
   Int_t thitCount1=0, thitCount2=0, hitCount1=0, hitCount2=0;
-  refLe=-1;
-  if(gTrigger>-1){
+  if(gTrigger>0){
     for(UInt_t h=0; h<fEvent->GetHitsSize(); h++){
       mult = fEvent->GetMultiplicity(h);
       for(UInt_t m=0; m<mult; m++){
@@ -272,7 +271,7 @@ Bool_t MSelector::Process(Long64_t entry){
   	if(hit.GetChannel() == (UInt_t)gTrigger) {
   	  refLe = hit.GetLeadTime();
   	}
-    }
+      }
     }
   }else{
     refLe=0;
@@ -291,7 +290,7 @@ Bool_t MSelector::Process(Long64_t entry){
 	hitCount1++;
 	continue;
       }
-      if(gMultCutMin!=gMultCutMax &&  (thitCount2<gMultCutMin || thitCount2>gMultCutMax)) continue; 
+      if(gMultCutMin!=gMultCutMax && (thitCount2<gMultCutMin || thitCount2>gMultCutMax)) continue; 
 
       pix = hit.GetPixelId()-1;
       col = 7-pix/8;
