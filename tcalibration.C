@@ -162,9 +162,9 @@ Bool_t TTSelector::Process(Long64_t entry){
     timeTe0[ch][mult[ch]]=time[i];
     if(Hits_nTdcChannel[i]==0) {  // is ref channel
       trbRefTime[trbSeqId] = time[i];
-      if((gTrigger-ch)<=32 && (gTrigger-ch)>0) grTime0 = time[i];
+      if(gTrigger!=0 && (gTrigger-ch)<=32 && (gTrigger-ch)>0) grTime0 = time[i];
     }
-    if(ch==gTrigger) grTime1 = time[i];
+    if(gTrigger!=0 && ch==gTrigger) grTime1 = time[i];
   }
   
   if((grTime0>0 && grTime1>0) || gTrigger==0){
@@ -179,14 +179,13 @@ Bool_t TTSelector::Process(Long64_t entry){
       pix = (7-col)*8+row;
       
       if(ch%2==0) continue; // go away trailing edge
-      if(ch<1920) {
+      if(ch<3000) {
 	timeLe = time[i]-trbRefTime[trbSeqId];
-	timeLe = timeLe - (grTime1-grTime0);	  
+	timeLe = timeLe - (grTime1-grTime0);
+	
 	//if(ch == 241) hL->Fill(timeLe);
+	
 	timeTot = timeTe0[ch+1][1] - timeTe0[ch][1]; 
-	
-	//std::cout<<"ch  "<<ch <<  "  timeTot  " <<timeTot <<"  offset "<< gGrDiff[ch]->Eval(timeTot) <<std::endl;
-	
 	if(gMode == 1) timeLe -= gGrDiff[ch]->Eval(timeTot);
 
 	TPrtHit hit(Hits_nTrbAddress[i],Hits_nTdcChannel[i],ch,mcp,pix+1,timeLe,timeTot);
@@ -223,7 +222,7 @@ void tcalibration(TString inFile= "../../data/cj.hld.root", TString outFile= "ou
   goutFile = outFile;
   gcFile = cFile; // fine time calibration
   gtFile = tFile; // pilas offsets + walk corrections
-  gTrigger = trigger+1;
+  gTrigger = trigger;
   if(gtFile=="") gMode = 0;
   else  gMode = 1;
 
