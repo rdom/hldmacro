@@ -256,6 +256,7 @@ Bool_t MSelector::Process(Long64_t entry){
 	if(ch == 379) continue;
 	if(ch == 381) continue;
 	if(ch == 1397) continue;
+	if(ch == 1869) continue;
 
 	if(hit.GetMcpId()>14) thitCount1++;
 	else  thitCount2++;
@@ -296,7 +297,8 @@ Bool_t MSelector::Process(Long64_t entry){
       if(ch == 379) continue;
       if(ch == 381) continue;
       if(ch == 1397) continue;
-
+      if(ch == 1869) continue;
+      
       Double_t timeDiff = le-refLe;
       
       if(gsTimeCuts!="0" && (timeDiff<gTimeCuts[mcp][col+8*row][0] || timeDiff>gTimeCuts[mcp][col+8*row][1])) continue;
