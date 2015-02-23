@@ -457,20 +457,26 @@ void getTimeOffset(){
 }
 
 void MyMainFrame::DoExportOffsets(){
-  TString filedir=ginFile;
-  filedir.Remove(filedir.Last('/'));
-  TFile efile(filedir+"/calibOffsets.root","RECREATE");
-  Int_t c;
-  for (Int_t m=0; m <nmcp; m++) {
-    for(Int_t p=0; p<npix; p++){
-      c = chmap[m][p];
-      gGrDiff[c]->SetName(Form("%d_%d_%d",c,m,p));
-      gGrDiff[c]->Write();
+  if(gMode==1) {
+    getTimeOffset();
+
+    TString filedir=ginFile;
+    filedir.Remove(filedir.Last('/'));
+    TFile efile(filedir+"/calibOffsets.root","RECREATE");
+    Int_t c;
+    for (Int_t m=0; m <nmcp; m++) {
+      for(Int_t p=0; p<npix; p++){
+	c = chmap[m][p];
+	gGrDiff[c]->SetName(Form("%d_%d_%d",c,m,p));
+	gGrDiff[c]->Write();
+      }
     }
+    efile.Write();
+    efile.Close();
+    std::cout<<"Exporting .. Done"<<std::endl;
+  }else{
+    std::cout<<"For exporting use -a1 flag"<<std::endl;
   }
-  efile.Write();
-  efile.Close();
-  std::cout<<"Exporting .. Done"<<std::endl;
 }
 
 Bool_t lock = false;
@@ -597,8 +603,7 @@ void MyMainFrame::DoDraw(){
   fHslider1->SetPosition(max);
 
   fCheckBtn1->SetState(kButtonUp);
-  
-  if(gMode==1) getTimeOffset();
+
   drawDigi("m,p,v\n",1);
   updatePlot(gComboId);
 }
