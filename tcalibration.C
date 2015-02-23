@@ -218,13 +218,14 @@ void TTSelector::Terminate(){
   // hL->Fit("gaus","V","E1",175,185);
 }
 
-void tcalibration(TString inFile= "../../data/cj.hld.root", TString outFile= "outFileC.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560, Int_t mode =0,  Int_t sEvent =0, Int_t eEvent=0){ //1920
+void tcalibration(TString inFile= "../../data/cj.hld.root", TString outFile= "outFileC.root", TString cFile= "calib.root", TString tFile= "calibOffsets.root", Int_t trigger=2560,  Int_t sEvent =0, Int_t eEvent=0){ //1920
   ginFile = inFile;
   goutFile = outFile;
   gcFile = cFile; // fine time calibration
   gtFile = tFile; // pilas offsets + walk corrections
   gTrigger = trigger+1;
-  gMode=mode;
+  if(gtFile=="") gMode = 0;
+  else  gMode = 1;
 
   TChain* ch = new TChain("T");
   ch->Add(ginFile);
