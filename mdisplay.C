@@ -243,32 +243,23 @@ Bool_t MSelector::Process(Long64_t entry){
  
   Double_t le,tot, refLe=-1;
   TPrtHit hit;
-  Int_t mcp,pix, mult,col,row;
+  Int_t mcp,pix, mult,col,row,ch;
   Int_t thitCount1=0, thitCount2=0, hitCount1=0, hitCount2=0;
   if(gTrigger>0){
     for(UInt_t h=0; h<fEvent->GetHitsSize(); h++){
       mult = fEvent->GetMultiplicity(h);
       for(UInt_t m=0; m<mult; m++){
-    
   	hit = fEvent->GetHit(h,m);
-	mcp = hit.GetMcpId();
-	pix = hit.GetPixelId()-1;
-	col = 7-pix/8;
-	row = pix%8;
-	le = hit.GetLeadTime();
-	tot = hit.GetTotTime();   
+	ch  = hit.GetChannel();
 
-	pix = col*8+row;
+	// bad pixels july14
+	if(ch == 379) continue;
+	if(ch == 381) continue;
+	if(ch == 1397) continue;
 
-	// bad pixels
-	if(mcp==2  && pix==55) continue;
-	if(mcp==2  && pix==62) continue;
-	if(mcp==13  && pix==62) continue;
-	if(mcp==14  && pix==28) continue;
-
-	if(mcp>14) thitCount1++;
+	if(hit.GetMcpId()>14) thitCount1++;
 	else  thitCount2++;
-  	if(hit.GetChannel() == (UInt_t)gTrigger) {
+  	if(ch == (UInt_t)gTrigger) {
   	  refLe = hit.GetLeadTime();
   	}
       }
@@ -292,6 +283,7 @@ Bool_t MSelector::Process(Long64_t entry){
       }
       if(gMultCutMin!=gMultCutMax && (thitCount2<gMultCutMin || thitCount2>gMultCutMax)) continue; 
 
+      ch  = hit.GetChannel();
       pix = hit.GetPixelId()-1;
       col = 7-pix/8;
       row = pix%8;
@@ -299,12 +291,11 @@ Bool_t MSelector::Process(Long64_t entry){
       tot = hit.GetTotTime();   
 
       pix = col*8+row;
-
-      // bad pixels
-      if(mcp==2  && pix==55) continue;
-      if(mcp==2  && pix==62) continue;
-      if(mcp==13  && pix==62) continue;
-      if(mcp==14  && pix==28) continue;
+      
+      // bad pixels july14
+      if(ch == 379) continue;
+      if(ch == 381) continue;
+      if(ch == 1397) continue;
 
       Double_t timeDiff = le-refLe;
       
