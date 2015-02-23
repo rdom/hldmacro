@@ -1035,6 +1035,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   else if(gTrigger==1920 || gTrigger==1921) fEdit1->SetText("400 -100 -50");
   else if(gTrigger==2560 || gTrigger==2561) fEdit1->SetText("400 150 200");
   else fEdit1->SetText("300 0 60");
+  if(ginFile.Contains("C.root"))  fEdit1->SetText("400 -10 10");;
 
   fEdit2->SetText("200 -2 5");
   if(gTrigger==1952 || gTrigger==1956) fEdit2->SetText("200 -2 5");
