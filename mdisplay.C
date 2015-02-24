@@ -848,13 +848,14 @@ void MyMainFrame::DoCheckBtnClecked4(){
 	fhDigi[m]->Fill(row,col,mean);
       }
     }
+    drawDigi("m,p,v\n",1,80,70);
   }
   if(fCheckBtn4->GetState() == kButtonUp){
     for(Int_t m=0; m<nmcp; m++){
       fhDigi[m] = fhDigi_temp[m];
     }
+    drawDigi("m,p,v\n",1);
   }
-  drawDigi("m,p,v\n",1,80,70);
 }
 
 void MyMainFrame::DoExit(){
