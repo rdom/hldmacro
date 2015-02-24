@@ -258,6 +258,13 @@ Bool_t MSelector::Process(Long64_t entry){
 	if(ch == 1397) continue;
 	if(ch == 1869) continue;
 
+	if(ch == 1405) continue;
+	if(ch == 1403) continue;
+	if(ch == 1385) continue;
+	if(ch == 1381) continue;
+	if(ch == 1383) continue;
+	if(ch == 1387) continue;
+
 	if(hit.GetMcpId()>14) thitCount1++;
 	else  thitCount2++;
   	if(ch == (UInt_t)gTrigger) {
@@ -298,7 +305,14 @@ Bool_t MSelector::Process(Long64_t entry){
       if(ch == 381) continue;
       if(ch == 1397) continue;
       if(ch == 1869) continue;
-      
+
+      if(ch == 1405) continue;
+      if(ch == 1403) continue;
+      if(ch == 1385) continue;
+      if(ch == 1381) continue;
+      if(ch == 1383) continue;
+      if(ch == 1387) continue;
+ 
       Double_t timeDiff = le-refLe;
       
       if(gsTimeCuts!="0" && (timeDiff<gTimeCuts[mcp][col+8*row][0] || timeDiff>gTimeCuts[mcp][col+8*row][1])) continue;
