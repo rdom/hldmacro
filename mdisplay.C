@@ -831,6 +831,32 @@ void MyMainFrame::DoCheckBtnClecked3(){
   }
 }
 
+TH2F* fhDigi_temp[15];
+void MyMainFrame::DoCheckBtnClecked4(){
+  if(fCheckBtn4->GetState() == kButtonDown){
+    TVector3 res;
+    for(Int_t m=0; m<nmcp; m++){
+      fhDigi_temp[m] = (TH2F*)fhDigi[m]->Clone();
+      if(fhDigi[m]) fhDigi[m]->Reset();
+    }
+    for (Int_t m=0; m <nmcp; m++) {
+      for(Int_t p=0; p<npix; p++){
+	Int_t col = p/8;
+	Int_t row = p%8;
+	Double_t mean = fit(hPTime[m][p],0.5).X();
+	if(mean>90) mean = 90; 
+	fhDigi[m]->Fill(row,col,mean);
+      }
+    }
+  }
+  if(fCheckBtn4->GetState() == kButtonUp){
+    for(Int_t m=0; m<nmcp; m++){
+      fhDigi[m] = fhDigi_temp[m];
+    }
+  }
+  drawDigi("m,p,v\n",1,80,70);
+}
+
 void MyMainFrame::DoExit(){
   gApplication->Terminate(0);
 }
@@ -923,6 +949,10 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   fCheckBtn2  = new TGCheckButton(fHm1, new TGHotString("3 sigma time cut                         "),        -1);
   fCheckBtn2->Connect("Clicked()", "MyMainFrame", this, "DoCheckBtnClecked2()");
   fHm1->AddFrame(fCheckBtn2, new TGLayoutHints(kLHintsBottom | kLHintsLeft,5, 5, 5, 5));
+
+  fCheckBtn4  = new TGCheckButton(fHm1, new TGHotString("show time map"),-1);
+  fCheckBtn4->Connect("Clicked()", "MyMainFrame", this, "DoCheckBtnClecked4()");
+  fHm1->AddFrame(fCheckBtn4, new TGLayoutHints(kLHintsBottom | kLHintsLeft,5, 5, 5, 5));
 
   TGTextButton * fBtnExport = new TGTextButton(fHm1, "Export for the &blog");
   fBtnExport->Connect("Clicked()", "MyMainFrame", this, "DoExport()");
@@ -1027,7 +1057,7 @@ MyMainFrame::MyMainFrame(const TGWindow *p, UInt_t w, UInt_t h) : TGMainFrame(p,
   else if(gTrigger==1920 || gTrigger==1921) fEdit1->SetText("400 -100 -50");
   else if(gTrigger==2560 || gTrigger==2561) fEdit1->SetText("400 150 200");
   else fEdit1->SetText("300 0 60");
-  if(ginFile.Contains("C.root"))  fEdit1->SetText("400 -10 10");;
+  if(ginFile.Contains("C.root"))  fEdit1->SetText("400 50 100");;
 
   fEdit2->SetText("200 -2 5");
   if(gTrigger==1952 || gTrigger==1956) fEdit2->SetText("200 -2 5");

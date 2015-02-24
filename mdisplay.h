@@ -29,6 +29,7 @@ private:
   TGCheckButton        *fCheckBtn1;
   TGCheckButton        *fCheckBtn2;
   TGCheckButton        *fCheckBtn3;
+  TGCheckButton        *fCheckBtn4;
   TGTextButton         *fBtnMore;
 
 public:
@@ -43,6 +44,7 @@ public:
   void DoCheckBtnClecked1();
   void DoCheckBtnClecked2();
   void DoCheckBtnClecked3();
+  void DoCheckBtnClecked4();
   TString updatePlot(Int_t id=0, TCanvas *cT=0);
   void SetStatusText(const char *txt, Int_t pi);
   void EventInfo(Int_t event, Int_t px, Int_t py, TObject *selected);

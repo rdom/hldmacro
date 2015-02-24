@@ -143,7 +143,7 @@ void TTSelector::Begin(TTree *){
 
 Bool_t TTSelector::Process(Long64_t entry){
   Int_t trbSeqId,ch,mcp,pix,col,row;;
-  Double_t timeTot(0), grTime0(0), grTime1(0),timeLe(0), timeTe(0),coarseTime;
+  Double_t timeTot(0), grTime0(0), grTime1(0),timeLe(0),coarseTime;
   Double_t time[50000];
   
   if(entry%1000==0) std::cout<<"event # "<< entry <<std::endl;

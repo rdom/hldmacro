@@ -54,7 +54,7 @@ TPad* fhPads[15];
 TPad * fhPglobal;
 TCanvas* cDigi;
 
-TString drawDigi(TString digidata="", Int_t layoutId = 0, Int_t maxz = 0){
+TString drawDigi(TString digidata="", Int_t layoutId = 0, Int_t maxz = 0, Int_t minz = 0){
   if(!cDigi) cDigi = new TCanvas("cDigi","cDigi",0,0,800,500);
   cDigi->cd();
   // TPad * pp = new TPad("P","T",0.06,0.135,0.93,0.865);
@@ -103,7 +103,7 @@ TString drawDigi(TString digidata="", Int_t layoutId = 0, Int_t maxz = 0){
     fhDigi[np]->Draw("col");
     if(maxz==-1)  max = fhDigi[np]->GetBinContent(fhDigi[np]->GetMaximumBin());
     fhDigi[np]->SetMaximum(max);
-    fhDigi[np]->SetMinimum(0);
+    fhDigi[np]->SetMinimum(minz);
     for(Int_t i=1; i<=8; i++){
       for(Int_t j=1; j<=8; j++){
 	Double_t weight = (double)(fhDigi[np]->GetBinContent(i,j))/(double)max *255;
