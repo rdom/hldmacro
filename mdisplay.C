@@ -507,11 +507,10 @@ void exec3event(Int_t event, Int_t gx, Int_t gy, TObject *selected){
       if(gComboId==11){
 	Int_t ch = chmap[mcp][pix];
 	hLeTot[mcp][pix]->Draw("colz");
-	Double_t* x = gGrDiff[ch]->GetX();
-	Double_t* y = gGrDiff[ch]->GetY();
-	Int_t n = gGrDiff[ch]->GetN();
+	Double_t* xx = gGrDiff[ch]->GetX();
+	Double_t* yy = gGrDiff[ch]->GetY();
 
-	TGraph* gr = new TGraph(n,y,x);
+	TGraph* gr = new TGraph(gGrDiff[ch]->GetN(),yy,xx);
 	gr->SetMarkerStyle(7);
 	gr->SetMarkerColor(2);
 	gr->Draw("P same");
@@ -848,7 +847,7 @@ void MyMainFrame::DoCheckBtnClecked4(){
 	fhDigi[m]->Fill(row,col,mean);
       }
     }
-    drawDigi("m,p,v\n",1,79,73);
+    drawDigi("m,p,v\n",1,-2,-2);
   }
   if(fCheckBtn4->GetState() == kButtonUp){
     for(Int_t m=0; m<nmcp; m++){

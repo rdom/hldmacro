@@ -54,7 +54,7 @@ TPad* fhPads[15];
 TPad * fhPglobal;
 TCanvas* cDigi;
 
-TString drawDigi(TString digidata="", Int_t layoutId = 0, Int_t maxz = 0, Int_t minz = 0){
+TString drawDigi(TString digidata="", Int_t layoutId = 0, Double_t maxz = 0, Double_t minz = 0){
   if(!cDigi) cDigi = new TCanvas("cDigi","cDigi",0,0,800,500);
   cDigi->cd();
   // TPad * pp = new TPad("P","T",0.06,0.135,0.93,0.865);
@@ -85,7 +85,8 @@ TString drawDigi(TString digidata="", Int_t layoutId = 0, Int_t maxz = 0, Int_t 
     }
   }
 
-  Int_t np,tmax, max=0;
+  Int_t np,tmax;
+  Double_t max=0;
   if(maxz==0){
     for(Int_t p=0; p<nrow*ncol;p++){
       tmax = fhDigi[p]->GetMaximum();
@@ -93,6 +94,35 @@ TString drawDigi(TString digidata="", Int_t layoutId = 0, Int_t maxz = 0, Int_t 
     }
   }else{
     max = maxz;
+  }
+
+  if(maxz==-2 && minz==-2){ // optimize range
+    max = maxz;
+    Int_t tbins = 2000;
+    TH1F *h = new TH1F("","",tbins,0,200);
+    for(Int_t p=0; p<nrow*ncol;p++){
+      for(Int_t i=0; i<64; i++){
+	Double_t val = fhDigi[p]->GetBinContent(i);
+	if(val!=0) h->Fill(val);
+      }
+    }
+   
+    Double_t integral;
+    for(Int_t i=0; i<tbins; i++){
+      integral = h->Integral(0,i);
+      if(integral>10) {
+	minz = h->GetBinCenter(i);
+	break;
+      } 
+    }
+
+    for(Int_t i=tbins; i>0; i--){
+      integral = h->Integral(i,tbins);
+      if(integral>10) {
+	max = h->GetBinCenter(i);
+	break;
+      } 
+    }
   }
 
   for(Int_t p=0; p<nrow*ncol;p++){
